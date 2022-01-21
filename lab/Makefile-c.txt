@@ -1,0 +1,35 @@
+# ------------------------------------------------------------
+# Makefile-c: An example Makefile for CMPUT 379 (incomplete)
+#
+# Usage: make -f Makefile-c starter  // compile program
+#        make -f Makefile-c run      // run the program
+#	      	 	     	      // Note: making this target may trigger
+#				      // compiling the program	 
+#        make -f Makefile-c tar      // create a 'tar.gz' archive of 'allFiles'
+#        make -f Makefile-c scp  // send '$(target).tar.gz' by scp to 'scpDir'
+#        make -f Makefile-c clean     // remove unneeded files
+# ------------------------------------------------------------
+
+target=		submit
+allFiles=       Makefile starter.c 
+scpDir=		username@labmachine.cs.ualberta.ca:directory
+# ------------------------------------------------------------
+
+
+starter:  starter.c
+	gcc -Wall starter.c -o starter
+
+run:	starter
+	starter abcd 100
+
+tar:
+	touch $(target).tar.gz
+	mv $(target).tar.gz  x$(target).tar.gz
+	tar -cvf $(target).tar $(allFiles)
+	gzip $(target).tar
+
+scp:
+	scp $(target).tar.gz $(scpDir)
+
+clean:
+	rm *~ out.* *.o
