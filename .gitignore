@@ -1,3 +1,5 @@
 assignment/ProcessManagePrograms/msh379
 **/.vscode
 **/build
+assignment/ProcessManagePrograms/.vscode/launch.json
+assignment/ProcessManagePrograms/.vscode/tasks.json
