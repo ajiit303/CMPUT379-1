@@ -1,44 +1,99 @@
-#include <stdio.h>
-#include <stdarg.h>
-
-#include <sys/resource.h>
-#include <sys/times.h>
-
-#define SOFTLIMIT 300
-#define HARDLIMIT 600
+#include "commands.h"
+#include "handler.h"
+#include "utils.h"
 
 
-void WARNING (const char *fmt, ...) {
-    va_list ap;
+int main () {
+
+  /* --------- Start time recording --------- */
+    struct tms tmsStart;
+    memset( &tmsStart, 0, sizeof(tmsStart) );
     
-    fflush( stdout );
-    
-    va_start( ap, fmt );
-    vfprintf( stderr, fmt, ap );
-    va_end( ap );
-}
+    clock_t startWallTime = times(&tmsStart);
+    if ( startWallTime == -1 ) {
+        warning( "Fail to start recording user CPU time" );
+    }
 
 
-int main() {
-    
+ /* --------- Set CPU time limit --------- */
     const struct rlimit limit = {
-        SOFTLIMIT,
-        HARDLIMIT
+        300, // Soft limit
+        600 // Hard limit
     };
 
     if ( setrlimit( RLIMIT_CPU, &limit ) != 0 ) {
-        WARNING( "Fail to set CPU time limit" );
+        warning( "Fail to set CPU time limit" );
     }
 
-    struct tms tms_start;
-    struct tms tms_end;
-    clock_t wall_time = times( &tms_start );
 
-    if ( wall_time == -1 ) {
-        WARNING( "Fail to start recordiing user CPU time" );
+    char *currentPath = NULL;
+    char inStr[MAXTOKENLENGTH * MAXTOKENS];
+    char tokens[MAXTOKENS][MAXTOKENLENGTH];
+    struct TaskDB taskList[NTASK];
+    pid_t parent_pid = 0;
+
+    memset( &inStr, 0, sizeof(inStr) );
+    memset( &tokens, 0, sizeof(tokens) );
+    memset( &tokens, 0, sizeof(taskList) );
+
+    currentPath = getenv("HOME");
+    parent_pid = getpid();
+
+
+ /* --------- Main Loop --------- */
+    printf( "msh379 [%d]: ", parent_pid );
+    while( scanf("%[^\n]", inStr) != EOF ) {
+        getchar();
+
+        int numTokens = split( inStr, tokens, " " );
+
+        if ( numTokens != 0 ) {
+            char * command = tokens[0];
+
+            if ( strcmp( command, "cdir" ) == 0 ) {
+                
+            } else if ( strcmp( command, "pdir" ) == 0 ) {
+                pdir();
+            } else if ( strcmp( command, "lstasks" ) == 0 ) {
+                
+            } else if ( strcmp( command, "run" ) == 0 ) {
+                
+            } else if ( strcmp( command, "stop" ) == 0 ) {
+                
+            } else if ( strcmp( command, "continue" ) == 0 ) {
+                
+            } else if ( strcmp( command, "terminate" ) == 0 ) {
+                
+            } else if ( strcmp( command, "check" ) == 0 ) {
+                
+            } else if ( strcmp( command, "exit" ) == 0 ) {
+                
+            } else if ( strcmp( command, "quit" ) == 0 ) {
+                break;
+            } else {
+                printf("msh379: %s: command not found", command);
+            }
+        }
+
+        printf( "msh379 [%d]: ", parent_pid );
+
+        memset( &inStr, 0, sizeof(inStr) );
+        memset( &tokens, 0, sizeof(tokens) );
     }
 
-    printf("walltime : %ld\n", wall_time);
+
+ /* --------- Stop time recording --------- */
+    struct tms tmsEnd;
+    memset( &tmsEnd, 0, sizeof(tmsEnd) );
+
+    clock_t endWallTime = times(&tmsEnd);
+    if ( endWallTime == -1 ) {
+        warning( "Fail to end recording user CPU time" );
+    }
+
+    printf("\n");
+    printTime(endWallTime - startWallTime, &tmsStart, &tmsEnd);
 
     return 0;
 }
+
