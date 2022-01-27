@@ -34,7 +34,7 @@ int main () {
 
     memset( &inStr, 0, sizeof(inStr) );
     memset( &tokens, 0, sizeof(tokens) );
-    memset( &tokens, 0, sizeof(taskList) );
+    memset( &taskList, 0, sizeof(taskList) );
 
     currentPath = getenv("HOME");
     parent_pid = getpid();
@@ -51,7 +51,7 @@ int main () {
             char * command = tokens[0];
 
             if ( strcmp( command, "cdir" ) == 0 ) {
-                
+                cdir(tokens[1]);
             } else if ( strcmp( command, "pdir" ) == 0 ) {
                 pdir();
             } else if ( strcmp( command, "lstasks" ) == 0 ) {
@@ -71,7 +71,7 @@ int main () {
             } else if ( strcmp( command, "quit" ) == 0 ) {
                 break;
             } else {
-                printf("msh379: %s: command not found", command);
+                printf("msh379: %s: command not found\n", command);
             }
         }
 

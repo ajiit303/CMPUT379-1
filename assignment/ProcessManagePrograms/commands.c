@@ -3,23 +3,85 @@
 #include "utils.h"
 
 
-void pdir() {
-    char *currentDir;
+void cdir (char *pathname) {
+    // /path/to/dir absolute path
+    // $ENV/path/to/ 
+    // path/to/dir relative path
+
+    if ( strlen(pathname) == 0 )
+        return;
+
+    char folders[MAXTOKENS][MAXTOKENLENGTH];
+    char pathnameEnv[MAXTOKENS * MAXTOKENLENGTH];
+    
+    memset( &folders, 0, sizeof(folders) );
+    memset( &pathnameEnv, 0, sizeof(pathnameEnv) );
+
+    int numFolders = split( pathname, folders, "/" );
+    for (int i = 0; i < numFolders; i++) {
+        
+        if ( startWith( folders[i], '$' ) ) {
+            char *path = NULL;
+
+            gsub( folders[i], "$" );
+
+            path = xgetenv( folders[i] );
+            if ( path != NULL )
+                strcpy( folders[i], path );
+
+        } else if ( strchr( folders[i], '$' ) )
+            gsub( folders[i], "$" );
+
+        strcat( pathnameEnv, folders[i] );
+        strcat( pathnameEnv, "/" );
+    }
+
+    if ( !startWith(pathnameEnv, '/' ) ) {
+        char *cwd = NULL;
+
+        cwd = xgetcwd();
+
+        if ( cwd != NULL ) {
+            strcat( cwd, "/" );
+            strcat( cwd, pathnameEnv );
+            strcpy( pathnameEnv, cwd );
+        } 
+    }
+
+    printf( "%s\n", pathnameEnv );
+}
+
+void pdir () {
+    char *cwd = NULL;
+    
+    cwd = xgetcwd();
+
+    if ( cwd != NULL )
+        printf( "%s\n", cwd );
+}
+
+char *xgetcwd () {
+    char *cwd = NULL;
     size_t bufferSize;
 
-    currentDir = pathAlloc(&bufferSize);
+    cwd = pathAlloc(&bufferSize);
 
-    if ( currentDir == NULL ) {
+    if ( cwd == NULL ) {
         warning( "Failed to allocate memory for path string" );
-        
-        return;
     }
 
-    if ( getcwd( currentDir, bufferSize ) == NULL ) {
+    if ( getcwd( cwd, bufferSize ) == NULL ) {
         warning( "Failed to get current directory" );
-
-        return;
     }
 
-    printf( "%s\n", currentDir );
+    return cwd;
 }
+
+char *xgetenv (char *env) {
+    char *path = NULL;
+    
+    path = getenv(env);
+
+    return path;
+}
+

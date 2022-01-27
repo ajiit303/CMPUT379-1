@@ -2,6 +2,25 @@
 #include "utils.h"
 
 
+int gsub ( char *t, char *omitSet ) {
+    int numOmit = 0;
+    int flag = 0;
+
+    while (*t != '\0') {
+        if (*t == *omitSet || flag) {
+            *t = *( t + 1 );
+
+            if (!flag) flag = 1;
+        } 
+        
+        numOmit++;
+        t++;
+    }
+
+    return numOmit;
+}
+
+
 void printTime ( clock_t wallTime, struct tms *tmsStart, struct tms *tmsEnd ) {
     long clockTick = 0;
 
@@ -55,6 +74,14 @@ char *pathAlloc (size_t *sizePtr) {
 
     return ptr;
 }
+
+int startWith (const char *str, const char compare) {
+    if ( str[0] == compare )
+        return 1;
+
+    return 0;
+}
+
 
 int split ( char *inStr, char tokens[MAXTOKENS][MAXTOKENS], char fs[] ) {
     int numToken = 0;

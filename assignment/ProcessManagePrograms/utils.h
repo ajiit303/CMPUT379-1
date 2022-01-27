@@ -26,7 +26,7 @@ struct TaskDB {
  * @param repStr 
  * @return Void
  */
-int gsub ( char *t, char *omitSet, char *repStr );
+int gsub ( char *t, char *omitSet);
 
 /**
  * @brief Get the Path Size object (Need Citation)
@@ -35,6 +35,8 @@ int gsub ( char *t, char *omitSet, char *repStr );
  * @return char* 
  */
 char *pathAlloc (size_t *sizePtr);
+
+int startWith ( const char *str, const char compare );
 
 /**
  * @brief (Need Citation)
