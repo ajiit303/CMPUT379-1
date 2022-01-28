@@ -45,10 +45,11 @@ void cdir (char *pathname) {
             strcat( cwd, "/" );
             strcat( cwd, pathnameEnv );
             strcpy( pathnameEnv, cwd );
-        } 
+        }
     }
 
-    printf( "%s\n", pathnameEnv );
+    if ( chdir(pathnameEnv) < 0 )
+        warning( "msh379: cdir: %s: No such file or directory\n", pathname );
 }
 
 void pdir () {
