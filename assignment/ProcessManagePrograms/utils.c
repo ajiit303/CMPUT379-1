@@ -2,31 +2,46 @@
 #include "utils.h"
 
 
-int gsub ( char *t, char *omitSet ) {
-    int numOmit = 0;
-    int flag = 0;
+int gsub ( char *inStr, char *filter, char *repStr ) {
+    int numMatch = 0;
+    int matched;
+    char outStr[MAXLEN];
+    memset( outStr, 0, sizeof(outStr) );
 
-    while (*t != '\0') {
-        if (*t == *omitSet || flag) {
-            *t = *( t + 1 );
+    for ( size_t i = 0; i < strlen(inStr); i++ ) {
 
-            if (!flag) flag = 1;
-        } 
-        
-        numOmit++;
-        t++;
+        matched = 0;
+
+        // Check whether if current character of the input string is in a set of
+        // provided characters for matching
+        for ( size_t j = 0; j < strlen(filter); j++ ) {
+            if ( inStr[i] == filter[j] ) {
+                strcat( outStr, repStr );
+
+                matched = 1;
+                numMatch++;
+
+                break;
+            }
+        }
+
+        if (matched == 0) {
+            outStr[ strlen(outStr) ] = inStr[i];
+        }
     }
 
-    return numOmit;
-}
+    memset( inStr, 0, sizeof(inStr) );
+    strcpy( inStr, outStr );
 
+    return numMatch;
+}
 
 void printTime ( clock_t wallTime, struct tms *tmsStart, struct tms *tmsEnd ) {
     long clockTick = 0;
 
     if ( clockTick == 0 ) {
         if ( (clockTick = sysconf(_SC_CLK_TCK)) < 0 ) {
-            warning( "Failed to fetch clock ticks per second" );
+            warning( "Failed to fetch clock ticks per second\n" );
         }
     }
 
@@ -41,7 +56,7 @@ void printTime ( clock_t wallTime, struct tms *tmsStart, struct tms *tmsEnd ) {
     printf( "   child user:   %7.2f\n", 
         ( tmsEnd->tms_cutime - tmsStart->tms_cutime ) / (double) clockTick );
 
-        printf( "   child sys:   %7.2f\n", 
+    printf( "   child sys:   %7.2f\n", 
         ( tmsEnd->tms_cstime - tmsStart->tms_cstime ) / (double) clockTick );
 
 }
@@ -56,9 +71,9 @@ char *pathAlloc (size_t *sizePtr) {
 
         if ( ( maxPath = pathconf( "/", _PC_PATH_MAX ) ) < 0 ) {
             if ( errno == 0 ) {
-                maxPath = 1024;
+                maxPath = GUESSPATHLEN;
             } else {
-                warning( "pathconf error for _PC_PATH_MAX" );
+                warning( "pathconf error for _PC_PATH_MAX\n" );
             }
         } else {
             maxPath++;
@@ -82,11 +97,10 @@ int startWith (const char *str, const char compare) {
     return 0;
 }
 
-
-int split ( char *inStr, char tokens[MAXTOKENS][MAXTOKENS], char fs[] ) {
+int split ( char *inStr, char tokens[][MAXCHARS], char fs[] ) {
     int numToken = 0;
 
-    char * token = NULL;
+    char *token = NULL;
 
     token = strtok( inStr, fs );
     while ( token != NULL ) {

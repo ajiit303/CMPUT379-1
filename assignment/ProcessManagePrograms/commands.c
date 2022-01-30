@@ -71,8 +71,15 @@ void cdir (char *pathname) {
         warning( "msh379: cdir: %s: No such file or directory\n", pathname );
 }
 
+void lstasks ( struct TaskDB *taskList, int numTask ) {
+    printf( "%s %10s\n", "Index", "Pid" );
+    for ( int i = 0; i < numTask; i++ )
+        printf( "%d%15d\n", taskList[i].index, taskList[i].pid );
+}
 
-void lstasks ( struct TaskDB *taskList, int numTasks ) {
+pid_t run ( char *pgm, char args[4] ) {
+
+    return 1;
 }
 
 void pdir () {
@@ -86,10 +93,6 @@ void pdir () {
     free(cwd);
 }
 
-void run ( char *pgm, char args[4] ) {
-    
-}
-
 char *xgetcwd () {
     char *cwd = NULL;
     size_t bufferSize;
@@ -97,11 +100,11 @@ char *xgetcwd () {
     cwd = pathAlloc(&bufferSize);
 
     if ( cwd == NULL ) {
-        warning( "Failed to allocate memory for path string" );
+        warning( "Failed to allocate memory for path string\n" );
     }
 
     if ( getcwd( cwd, bufferSize ) == NULL ) {
-        warning( "Failed to get current directory" );
+        warning( "Failed to get current directory\n" );
     }
 
     return cwd;
@@ -120,4 +123,3 @@ int xgetenv (char *envVar) {
 
     return 1;
 }
-

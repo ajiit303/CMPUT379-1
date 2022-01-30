@@ -7,17 +7,21 @@
 #include <sys/resource.h>
 #include <sys/times.h>
 
-#define MAXTOKENLENGTH 32
-#define MAXTOKENS 32
+#ifndef UTILS_H
+#define UTILS_H
+
+#define MAXCHARS 32
+#define MAXNTOKENS 132
+#define MAXLEN MAXCHARS * MAXNTOKENS
 #define NTASK 32
-
-
-static long maxPath = 0;
+#define GUESSPATHLEN 1024
 
 struct TaskDB {
     int index;
     pid_t pid;
 };
+
+static long maxPath = 0;
 
 /** @brief Replace variable such $HOME with its actual content
  * 
@@ -26,7 +30,7 @@ struct TaskDB {
  * @param repStr 
  * @return Void
  */
-int gsub ( char *t, char *omitSet);
+int gsub ( char *inStr, char *filter, char *repStr);
 
 /**
  * @brief Get the Path Size object (Need Citation)
@@ -54,8 +58,6 @@ void printTime ( clock_t wallTime, struct tms *tmsStart, struct tms *tmsEnd );
  * @param fs Field separater for separating arguments and command
  * @return Number of tokens
  */
-int split ( char *inStr, char tokens[MAXTOKENS][MAXTOKENLENGTH], char fs[] );
+int split ( char *inStr, char tokens[][MAXCHARS], char fs[] );
 
-
-
-
+#endif

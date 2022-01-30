@@ -25,11 +25,11 @@ int main () {
         warning( "Fail to set CPU time limit" );
     }
 
-
     char *currentPath = NULL;
-    char inStr[MAXTOKENLENGTH * MAXTOKENS];
-    char tokens[MAXTOKENS][MAXTOKENLENGTH];
+    char inStr[MAXLEN];
+    char tokens[MAXNTOKENS][MAXCHARS];
     struct TaskDB taskList[NTASK];
+    int numTasks = 0;
     pid_t parent_pid = 0;
 
     memset( &inStr, 0, sizeof(inStr) );
@@ -55,9 +55,17 @@ int main () {
             } else if ( strcmp( command, "pdir" ) == 0 ) {
                 pdir();
             } else if ( strcmp( command, "lstasks" ) == 0 ) {
-                
+                lstasks( taskList, numTasks );
             } else if ( strcmp( command, "run" ) == 0 ) {
                 
+                if ( numTokens == 1 ) {
+                    warning( "msh379: run: no specified program\n" );
+                } else if ( numTokens > 6 ) {
+                    warning( "msh379: run: too many arguments\n" );
+                } else { 
+                    
+                }
+
             } else if ( strcmp( command, "stop" ) == 0 ) {
                 
             } else if ( strcmp( command, "continue" ) == 0 ) {
@@ -67,9 +75,9 @@ int main () {
             } else if ( strcmp( command, "check" ) == 0 ) {
                 
             } else if ( strcmp( command, "exit" ) == 0 ) {
-                
-            } else if ( strcmp( command, "quit" ) == 0 ) {
                 break;
+            } else if ( strcmp( command, "quit" ) == 0 ) {
+                return 1;
             } else {
                 printf("msh379: %s: command not found\n", command);
             }
@@ -88,7 +96,7 @@ int main () {
 
     clock_t endWallTime = times(&tmsEnd);
     if ( endWallTime == -1 ) {
-        warning( "Fail to end recording user CPU time" );
+        warning( "Fail to end recording user CPU time\n" );
     }
 
     printf("\n");
