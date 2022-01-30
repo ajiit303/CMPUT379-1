@@ -1,3 +1,5 @@
+#include <sys/wait.h>
+
 #include "commands.h"
 #include "handler.h"
 #include "utils.h"
@@ -52,7 +54,6 @@ void cdir (char *pathname) {
         strcat( pathnameEnv, "/" );
     }
 
-
     if ( !startWith(pathnameEnv, '/' ) ) {
         char *cwd = NULL;
 
@@ -65,21 +66,18 @@ void cdir (char *pathname) {
         }
     }
 
-
-
-   if ( chdir(pathnameEnv) < 0 )
-        warning( "msh379: cdir: %s: No such file or directory\n", pathname );
+    if ( chdir(pathnameEnv) < 0 )
+        warning( "cdir: %s: No such file or directory\n", pathname );
+    else 
+        printf( "cdir: change directory successfully\n" );
 }
 
-void lstasks ( struct TaskDB *taskList, int numTask ) {
+void lstasks (struct TaskDB *taskList) {
     printf( "%s %10s\n", "Index", "Pid" );
-    for ( int i = 0; i < numTask; i++ )
-        printf( "%d%15d\n", taskList[i].index, taskList[i].pid );
-}
-
-pid_t run ( char *pgm, char args[4] ) {
-
-    return 1;
+    for ( int i = 0; i < NTASK; i++ ) {
+        if (!taskList[i].pid == 0)
+            printf( "%d%15d\n", taskList[i].index, taskList[i].pid );
+    }
 }
 
 void pdir () {
@@ -93,6 +91,64 @@ void pdir () {
     free(cwd);
 }
 
+pid_t run ( char *pgm, char args[4] ) {
+    pid_t pid;
+
+    if ( ( pid = fork() ) < 0 )
+        warning( "run: fork error" );
+    else
+
+    if ( pid != 0 )
+        printf( "run: new processes is created\n" );
+
+    return pid;
+}
+
+void stop ( pid_t pid ) {
+    if ( kill( pid, SIGSTOP ) == -1)
+        fatal( "stop: cannot stop task %d\n", pid );
+    else {
+        int status;
+        if ( waitpid( pid, &status, WUNTRACED ) != pid )
+            fatal( "stop: cannot get status of task %d\n" );
+        
+        if ( !WSTOPSIG(status) )
+            fatal( "stop: cannot stop task %d\n" );
+        else
+            printf( "stop: task %d stopped\n", pid );
+    }
+}
+
+void terminate ( pid_t pid ) {
+    if ( kill( pid, SIGKILL ) == -1 )
+        fatal( "stop: cannot stop task %d\n", pid );
+    else {
+        int status;
+        if ( waitpid( pid, &status, WUNTRACED ) != pid )
+            fatal( "terminate: cannot get status of task %d\n", pid );
+        
+        if ( !WIFSIGNALED(status) )
+            fatal( "terminate: cannot terminate task %d\n", pid );
+        else
+            printf( "terminate: task %d terminated\n", pid );
+    }
+}
+
+void xcontinue ( pid_t pid ) {
+    if ( kill( pid, SIGCONT ) == -1 )
+        fatal( "continue: cannot continue task %d\n", pid );
+    else {
+        int status;
+        if ( waitpid( pid, &status, WCONTINUED ) != pid )
+            fatal( "continue: cannot get status of task %d\n", pid );
+        
+        if ( !WIFCONTINUED(status) )
+            fatal( "continue: cannot continue task %d\n", pid );
+        else
+            printf( "continue: task %d is resumed\n", pid );
+    }
+}
+
 char *xgetcwd () {
     char *cwd = NULL;
     size_t bufferSize;
@@ -100,11 +156,11 @@ char *xgetcwd () {
     cwd = pathAlloc(&bufferSize);
 
     if ( cwd == NULL ) {
-        warning( "Failed to allocate memory for path string\n" );
+        warning( "xgetcwd: cannot allocate memory for path string\n" );
     }
 
     if ( getcwd( cwd, bufferSize ) == NULL ) {
-        warning( "Failed to get current directory\n" );
+        warning( "xgetcwd:cannot get current directory\n" );
     }
 
     return cwd;
