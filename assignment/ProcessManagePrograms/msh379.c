@@ -36,34 +36,57 @@ int main () {
 
     memset( &inStr, 0, sizeof(inStr) );
     memset( &tokens, 0, sizeof(tokens) );
-    memset( &taskList, 0, sizeof(taskList) );
+    
+    for ( int i = 0; i < NTASK; i++ ) {
+        taskList[i].index = -1;
+        taskList[i].pid = -1;
+    }
 
     numTasks = 0;
+    exitFlag = 0;
     parent_pid = getpid();
 
 
  /* --------- Main Loop --------- */
     printf( "msh379 [%d]: ", parent_pid );
-    while( scanf("%[^\n]", inStr) != EOF ) {
+    while( scanf("%[^\n]", inStr) != EOF) {
         getchar();
 
         int numTokens = split( inStr, tokens, " " );
 
-        if ( numTokens != 0 ) {
+        if ( numTokens == 0 ) { 
+            printf( "msh379 [%d]: ", parent_pid );
+            continue;
+        }
 
-            char *command = tokens[0];
+        char *command = tokens[0];
+        int cmdIndex = getcmdIndex( command );
 
-            if ( strcmp( command, "cdir" ) == 0 ) 
-                cdir(tokens[1]);
-            else if ( strcmp( command, "pdir" ) == 0 )
-                pdir();
-            else if ( strcmp( command, "lstasks" ) == 0 )
-                lstasks(taskList);
-            else if ( strcmp( command, "run" ) == 0 ) {
-                if ( numTokens > 6 )
-                    warning( "run: too many arguments\n" );
-                else if (numTasks == NTASK - 1) {
-                    warning( "run: number of task limit reached, cannot run more task\n" );
+        if ( cmdIndex == -1 ) {
+            warning( "msh379: %s: command not found\n" );
+            printf( "msh379 [%d]: ", parent_pid );
+            memset( inStr, 0, sizeof(inStr) );
+            memset( tokens, 0, sizeof(tokens) );
+            continue;
+        }
+        
+        if ( checkArgs( cmdIndex, numTokens - 1 ) == 0 ) {
+            printf( "msh379 [%d]: ", parent_pid );
+            memset( inStr, 0, sizeof(inStr) );
+            memset( tokens, 0, sizeof(tokens) );
+            continue;
+        }
+
+        switch(cmdIndex) {
+            case 0:
+                cdir(tokens[1]); break;
+            case 1:
+                pdir(); break;
+            case 2:
+                lstasks(taskList); break;
+            case 3:
+                if (numTasks == NTASK - 1) {
+                    warning( "run: number of task limit reached, cannot run more task\n" ); break;
                 } else {
                     pid_t pid;
 
@@ -73,81 +96,65 @@ int main () {
 
                         }
                     } else {
-                        taskList[numTasks].index = numTasks;
-                        taskList[numTasks].pid = pid;
-                        numTasks++;
+                        for ( int i = 0; i < NTASK; i++ ) {
+                            if ( taskList[i].index == -1 && taskList[i].pid == -1 ) {
+                                taskList[i].index = i;
+                                taskList[i].pid = pid;
+                                numTasks++;
+                                break;
+                            }
+                        }
                     }
                 }
-            } else if ( strcmp( command, "stop" ) == 0 ) {
-                if ( numTokens == 1 ) {
-                    warning( "stop: no specified task\n" );
-                } else if ( numTokens > 2 ) {
-                    warning( "stop: too many arguments\n" );
-                } else if ( numTasks == 0 ) {
-                    warning( "stop: No tasks are running\n" );
-                } else {
-                    int taskNo = atoi(tokens[1]);
-                    if ( taskNo < 0 || taskNo > 31 || taskNo != taskList[taskNo].index )
-                        warning( "stop: Invalid taskNo\n" );
-                    else
-                        stop(taskList[taskNo].pid);
-                }
-            } else if ( strcmp( command, "continue" ) == 0 ) {
-                if ( numTokens == 1 ) {
-                    warning( "continue: no specified task\n" );
-                } else if ( numTokens > 2 ) {
-                    warning( "continue: too many arguments\n" );
-                } else if ( numTasks == 0 ) {
-                    warning( "continue: No tasks are running\n" );
-                } else {
-                    int taskNo = atoi(tokens[1]);
-                    if ( taskNo < 0 || taskNo > 31 || taskList[taskNo].pid == 0 )
-                        warning( "continue: Invalid taskNo\n" );
-                    else
-                        xcontinue(taskList[taskNo].pid);
-                }
-            } else if ( strcmp( command, "terminate" ) == 0 ) {
-                if ( numTokens == 1 ) {
-                    warning( "terminate: no specified task\n" );
-                } else if ( numTokens > 2 ) {
-                    warning( "terminate: too many arguments\n" );
-                } else if ( numTasks == 0 ) {
-                    warning( "terminate: No tasks are running\n" );
-                } else {
-                    int taskNo = atoi(tokens[1]);
-                    if ( taskNo < 0 || taskNo > 31 || taskList[taskNo].pid == 0 )
-                        warning( "terminate: Invalid taskNo\n" );
-                    else {
-                        terminate(taskList[taskNo].pid);
 
-                        taskList[taskNo].index = 0;
-                        taskList[taskNo].pid = 0;
-                        numTasks--;
-                    }
-                }
-            } else if ( strcmp( command, "check" ) == 0 ) {
+                break;
+            case 4: {
+                int taskNo = getTaskNo( tokens[0], tokens[1], numTasks, taskList );
+                if ( taskNo == -1 ) break;
+                stop(taskList[taskNo].pid);
                 
-            } else if ( strcmp( command, "exit" ) == 0 ) {
-                exitFlag = 0;
+                break;
+            }
+            case 5: {
+                int taskNo = getTaskNo( tokens[0], tokens[1], numTasks, taskList );
+                if ( taskNo == -1 ) break;
+                xcontinue(taskList[taskNo].pid);
+                
+                break;
+            }
+            case 6: {
+                int taskNo = getTaskNo( tokens[0], tokens[1], numTasks, taskList );
+                if ( taskNo == -1 ) break;
+                    
+                terminate(taskList[taskNo].pid);
+
+                taskList[taskNo].index = -1;
+                taskList[taskNo].pid = -1;
+                numTasks--;
+
+                break;
+            }
+            case 7:
+                break;
+            case 8:
+                exitFlag = 1;
                 
                 for ( int i = 0; i < NTASK; i++ ) {
-                    if ( !taskList[i].pid == 0 )
+                    if ( taskList[i].pid != -1 )
                         terminate(taskList[i].pid);
                 }
 
                 break;
-            } else if ( strcmp( command, "quit" ) == 0 ) {
+            case 9:
                 exitFlag = 1;
                 break;
-            } else {
-                printf("msh379: %s: command not found\n", command);
-            }
         }
 
         printf( "msh379 [%d]: ", parent_pid );
+        memset( inStr, 0, sizeof(inStr) );
+        memset( tokens, 0, sizeof(tokens) );
 
-        memset( &inStr, 0, sizeof(inStr) );
-        memset( &tokens, 0, sizeof(tokens) );
+        if ( exitFlag ) break;
     }
 
 
@@ -162,6 +169,5 @@ int main () {
     printf("\n");
     printTime(endWallTime - startWallTime, &tmsStart, &tmsEnd);
 
-    return exitFlag;
+    return 0;
 }
-
