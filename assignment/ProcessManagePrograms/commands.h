@@ -2,14 +2,28 @@
 
 #include "utils.h"
 
+
 #ifndef COMMANDS_H
 #define COMMANDS_H
+#define NCMD 10
+#define REQUIRE 0
+#define OPTIONAL 1
+
+struct CommandDB {
+    char name[16];
+    int numArgs;
+    int optional;
+};
 
 void cdir (char *pathname);
 
 void check (pid_t pid);
 
-int getSigacts (char *command);
+int checkArgs ( int cmdIndex, int numArgs );
+
+int getTaskNo ( char *cmdName, char *strTaskNo, int numTasks, struct TaskDB *taskList );
+
+int getcmdIndex (char *command);
 
 void lstasks (struct TaskDB *taskList);
 
