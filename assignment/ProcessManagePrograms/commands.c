@@ -5,6 +5,19 @@
 #include "utils.h"
 
 
+static const struct CommandDB commands[NCMD] = {
+    {"cdir", 1, REQUIRE},
+    {"pdir", 0, OPTIONAL},
+    {"lstasks", 0, OPTIONAL},
+    {"run", 5, OPTIONAL},
+    {"stop", 1, REQUIRE},
+    {"continue", 1, REQUIRE},
+    {"terminate", 1, REQUIRE},
+    {"check", 1, REQUIRE},
+    {"exit", 0, OPTIONAL},
+    {"quit", 0, OPTIONAL}
+};
+
 void cdir (char *pathname) {
 
     if ( strlen(pathname) == 0 )
@@ -72,10 +85,57 @@ void cdir (char *pathname) {
         printf( "cdir: change directory successfully\n" );
 }
 
+int checkArgs ( int cmdIndex, int numArgs ) {
+    if ( commands[cmdIndex].optional )
+        return 1;
+    
+    if ( numArgs > commands[cmdIndex].numArgs ) {
+        warning( "%s: too many arugments\n", commands[cmdIndex].name );
+        return 0;
+    }
+
+    if ( numArgs < commands[cmdIndex].numArgs ) {
+        warning( "%s: not enought arguments\n", commands[cmdIndex].name );
+        return 0;
+    }
+
+    return 1;
+}
+
+int getTaskNo ( char *cmdName, char *strTaskNo, int numTasks, struct TaskDB *taskList ) {
+    int taskNo = -1;
+ 
+    if ( numTasks == 0 ) {
+        warning( "%s: No tasks are running\n", cmdName );
+        return taskNo;
+    }
+
+    taskNo = atoi(strTaskNo);
+    if ( taskNo < 0 || taskNo > NTASK || taskList[taskNo].pid == -1 ) {
+        warning( "%s: Invalid taskNo\n", cmdName );
+        taskNo = -1;
+    }
+
+    return taskNo;
+}
+
+int getcmdIndex (char *command) {
+    int cmdIndex = -1;
+
+    for (int i = 0; i < NCMD; i++) {
+        if ( strcmp( commands[i].name, command ) == 0 ) {
+            cmdIndex = i;
+            break;
+        }
+    }
+
+    return cmdIndex;
+}
+
 void lstasks (struct TaskDB *taskList) {
     printf( "%s %10s\n", "Index", "Pid" );
     for ( int i = 0; i < NTASK; i++ ) {
-        if (!taskList[i].pid == 0)
+        if (taskList[i].pid != -1)
             printf( "%d%15d\n", taskList[i].index, taskList[i].pid );
     }
 }
