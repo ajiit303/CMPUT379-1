@@ -90,12 +90,14 @@ int main () {
                 } else {
                     pid_t pid;
 
-                    pid = run( tokens[1], tokens[2] );
-                    if (pid == 0) {
-                        for ( ; ; ) {
+                    if ( numTokens > 2 && numTokens > 6 ) {
+                        warning( "run: too much arguments" );
+                        break;
+                    }
 
-                        }
-                    } else {
+                    pid = run( tokens[1], tokens );
+
+                    if (pid > 0) {
                         for ( int i = 0; i < NTASK; i++ ) {
                             if ( taskList[i].index == -1 && taskList[i].pid == -1 ) {
                                 taskList[i].index = i;

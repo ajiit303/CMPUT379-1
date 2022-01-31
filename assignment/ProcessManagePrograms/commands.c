@@ -151,15 +151,22 @@ void pdir () {
     free(cwd);
 }
 
-pid_t run ( char *pgm, char args[4] ) {
+pid_t run ( char *pgm, char **args ) {
     pid_t pid;
 
-    if ( ( pid = fork() ) < 0 )
-        warning( "run: fork error" );
-    else
+    if ( ( pid = fork() ) < 0 ) 
+        warning( "run: fork error\n" );
 
-    if ( pid != 0 )
+    if ( pid > 0 )
         printf( "run: new processes is created\n" );
+    
+    if ( pid == 0 && strlen(pgm) != 0 ) {
+        
+        
+        for ( int i = 2; i < 6; i++ ) {
+
+        }
+    }
 
     return pid;
 }

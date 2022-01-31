@@ -27,7 +27,7 @@ int getcmdIndex (char *command);
 
 void lstasks (struct TaskDB *taskList);
 
-pid_t run ( char *pgm, char args[4] );
+pid_t run ( char *pgm, char **args );
 
 void stop ( pid_t pid );
 
