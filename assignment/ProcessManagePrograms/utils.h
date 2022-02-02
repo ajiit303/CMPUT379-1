@@ -18,37 +18,51 @@
 
 
 struct TaskDB {
+    char command[MAXLEN];
     int index;
     pid_t pid;
 };
 
 static long maxPath = 0;
 
-/** @brief Replace variable such $HOME with its actual content
+/** @brief Omit a specific string pattern based on the specific filter and 
+ * replace with string, repStr
  * 
  * @param t Input String
- * @param omitSet Omitted character such as "$"
- * @param repStr 
+ * @param omitSet Omitted string
+ * @param repStr Replacement string
  * @return Void
  */
 int gsub ( char *inStr, char *filter, char *repStr);
 
 /**
- * @brief Get the Path Size object (Need Citation)
+ * @brief Get the estimated string size for a path since
+ * a path can be very long. Clone version of the code in
+ * Chapter 2.5.5 in the textbook APUE
  * 
- * @param sizep 
+ * @param sizep pointer of size
  * @return char* 
  */
 char *pathAlloc (size_t *sizePtr);
 
+/**
+ * @brief Return true if a string, str starts with a 
+ * character, compare.
+ * 
+ * @param str Input string
+ * @param compare 
+ * @return int 
+ */
 int startWith ( const char *str, const char compare );
 
 /**
- * @brief (Need Citation)
+ * @brief Calculate and print the user and CPU times for the current process 
+ * (and its terminated children). Clon version of the code in Chapter 8.17 in
+ * the textbook APUE
  * 
- * @param wallTime 
- * @param tmsStart 
- * @param tmsEnd 
+ * @param wallTime wall clock time
+ * @param tmsStart ptr of time structure generated at the beginning of the program
+ * @param tmsEnd ptr of time structure generated at the ending of the program
  */
 void printTime ( clock_t wallTime, struct tms *tmsStart, struct tms *tmsEnd );
 
