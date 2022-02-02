@@ -9,10 +9,13 @@
 #define REQUIRE 0
 #define OPTIONAL 1
 
+/**
+ * @brief A struct for representation of a command
+ */
 struct CommandDB {
-    char name[16];
-    int numArgs;
-    int optional;
+    char name[16]; // name of the command
+    int numArgs; // number of required arguments
+    int optional; // arguments is optional or mandatory
 };
 
 void cdir (char *pathname);
@@ -29,13 +32,15 @@ void lstasks (struct TaskDB *taskList);
 
 pid_t run ( char *pgm, char **args );
 
-void stop ( pid_t pid );
+void stop (pid_t pid);
 
-void xcontinue ( pid_t pid );
+void xcontinue (pid_t pid);
 
-void terminate ( pid_t pid );
+void terminate (pid_t pid);
 
 void pdir ();
+
+void xexit ( struct tms *start, struct TaskDB *taskList );
 
 int xgetenv (char *envVar);
 
