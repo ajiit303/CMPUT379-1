@@ -6,6 +6,8 @@
 #ifndef COMMANDS_H
 #define COMMANDS_H
 #define NCMD 10
+#define NARG 6
+#define MAXBUF 256
 #define REQUIRE 0
 #define OPTIONAL 1
 
@@ -30,17 +32,17 @@ int getcmdIndex (char *command);
 
 void lstasks (struct TaskDB *taskList);
 
-pid_t run ( char *pgm, char **args );
+pid_t run ( char *pgm, char args[][MAXCHARS], int numArgs );
 
-void stop (pid_t pid);
+void stop ( pid_t pid );
 
-void xcontinue (pid_t pid);
+void xcontinue ( pid_t pid );
 
-void terminate (pid_t pid);
+void terminate ( pid_t pid );
 
 void pdir ();
 
-void xexit ( struct tms *start, struct TaskDB *taskList );
+void xexit ( clock_t startWallTime, struct tms *tmsStart, struct TaskDB *taskList );
 
 int xgetenv (char *envVar);
 

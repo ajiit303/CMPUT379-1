@@ -84,7 +84,7 @@ void cdir (char *path) {
                 } 
                 
                 // Concatenate each environmental value and normal string to 
-                // form a folder name
+                // form a folder name    
                 strcat( folders[i], envVars[j] );
             }
         }
@@ -93,7 +93,7 @@ void cdir (char *path) {
         strcat( pathParsed, folders[i] );
         strcat( pathParsed, "/" );
     }
-
+    
     // If a path is a relative path, attach the absolute path of the current 
     // directory 
     if ( !startWith(pathParsed, '/' ) ) {
@@ -111,7 +111,30 @@ void cdir (char *path) {
     if ( chdir(pathParsed) < 0 )
         warning( "cdir: %s: No such file or directory\n", pathParsed );
     else 
-        printf( "cdir: done (pathname=%2s)", pathParsed );
+        printf( "cdir: done (pathname=%2s)\n", pathParsed );
+}
+
+void check (pid_t pid) {
+    char buf[MAXBUF];
+    int status = 0;
+    int countline = 0;
+    FILE *file = NULL;
+
+    memset( &buf, 0, sizeof(buf) );
+    file = popen( "ps -u $USER -o user,pid,ppid,state,start,cmd --sort start", "r" );
+    
+    if (file) {
+        char tokens[6][MAXCHARS];
+
+        while ( fgets( buf, MAXBUF, file ) != NULL ) {
+            int numTokens = split( buf, tokens, " " );
+            printf( "%s\n", tokens[1] );
+        }
+    }
+
+    status = pclose(file);
+    if ( status == -1 )
+        fatal( "check: cannot close the pipe\n" );
 }
 
 int checkArgs ( int cmdIndex, int numArgs ) {
@@ -180,7 +203,7 @@ void pdir () {
     free(cwd);
 }
 
-pid_t run ( char *pgm, char **args ) {
+pid_t run ( char *pgm, char args[][MAXCHARS], int numArgs ) {
     pid_t pid;
 
     if ( ( pid = fork() ) < 0 ) 
@@ -190,17 +213,23 @@ pid_t run ( char *pgm, char **args ) {
         printf( "run: new processes is created\n" );
     
     if ( pid == 0 && strlen(pgm) != 0 ) {
+        char *argv[NARG];
         
-        
-        for ( int i = 2; i < 6; i++ ) {
+        argv[0] = pgm;
 
-        }
+        for (int i = 0 ; i <= numArgs; i++ )
+            argv[i+1] = args[i+2];
+
+        argv[numArgs+1] = NULL;
+
+        if ( execvp( pgm, argv ) < 0 )
+            warning( "run: cannot run %s\n", pgm );
     }
 
     return pid;
 }
 
-void stop (pid_t pid) {
+void stop ( pid_t pid ) {
     if ( kill( pid, SIGSTOP ) == -1)
         fatal( "stop: cannot stop task %d\n", pid );
     else {
@@ -215,7 +244,7 @@ void stop (pid_t pid) {
     }
 }
 
-void terminate (pid_t pid) {
+void terminate ( pid_t pid ) {
     if ( kill( pid, SIGKILL ) == -1 )
         fatal( "stop: cannot stop task %d\n", pid );
     else {
@@ -227,7 +256,7 @@ void terminate (pid_t pid) {
     }
 }
 
-void xcontinue (pid_t pid) {
+void xcontinue ( pid_t pid ) {
     if ( kill( pid, SIGCONT ) == -1 )
         fatal( "continue: cannot continue task %d\n", pid );
     else {
@@ -242,7 +271,7 @@ void xcontinue (pid_t pid) {
     }
 }
 
-void xexit ( struct tms *start, struct TaskDB *taskList ) {
+void xexit ( clock_t startWallTime, struct tms *tmsStart, struct TaskDB *taskList ) {
     if ( taskList != NULL ) {
         for ( int i = 0; i < NTASK; i++ ) {
             if ( taskList[i].pid != -1 )

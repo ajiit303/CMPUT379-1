@@ -27,7 +27,6 @@ int main () {
 
 
     int numTasks;
-    int exitFlag;  // a flag for break through 
     pid_t parent_pid;
 
     char inStr[MAXLEN];
@@ -43,7 +42,6 @@ int main () {
     }
 
     numTasks = 0;
-    exitFlag = 0;
     parent_pid = getpid();
 
 
@@ -87,21 +85,24 @@ int main () {
             case 3:
                 if (numTasks == NTASK - 1) {
                     warning( "run: number of task limit reached, cannot run more task\n" ); break;
+                }
+
                 if ( numTokens > 2 && numTokens > 6 ) {
-                    warning( "run: too much arguments" ); break;
+                    warning( "run: too many arguments for program %s\n", tokens[1] ); break;
                 }
 
                 pid_t pid;
 
-                pid = run( tokens[1], tokens );
-                if (pid > 0) {
-                    
+                pid = run( tokens[1], tokens, numTokens - 2 );
+                if ( pid == 0 ) return 0;
+
+                if ( pid > 0 ) {
+
                     char command[MAXCHARS];
                     memset( command, 0, sizeof(command) );
 
                     for ( int i = 1; i < numTokens; i++ )
                         strcat( command, tokens[i] );
-
 
                     for ( int i = 0; i < NTASK; i++ ) {
                         if ( taskList[i].index == -1 && taskList[i].pid == -1 ) {
@@ -137,7 +138,7 @@ int main () {
 
                 taskList[taskNo].index = -1;
                 taskList[taskNo].pid = -1;
-                
+
                 numTasks--;
 
                 break;
@@ -145,15 +146,15 @@ int main () {
             case 7:
                 break;
             case 8:
-                xexit( tmsStart, taskList );
+                xexit( startWallTime, &tmsStart, taskList );
                 return 0;
             case 9:
-                xexit( tmsStart, NULL );
+                xexit( startWallTime, &tmsStart, NULL );
                 return 0;
         }
 
         printf( "msh379 [%d]: ", parent_pid );
         memset( inStr, 0, sizeof(inStr) );
-        memset( tokens, 0, sizeof(tokens) );
+        memset( tokens, 0, sizeof(tokens) );        
     }
 }
