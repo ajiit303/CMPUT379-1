@@ -27,7 +27,7 @@ int main () {
 
 
     int numTasks;
-    int exitFlag;
+    int exitFlag;  // a flag for break through 
     pid_t parent_pid;
 
     char inStr[MAXLEN];
@@ -87,24 +87,29 @@ int main () {
             case 3:
                 if (numTasks == NTASK - 1) {
                     warning( "run: number of task limit reached, cannot run more task\n" ); break;
-                } else {
-                    pid_t pid;
+                if ( numTokens > 2 && numTokens > 6 ) {
+                    warning( "run: too much arguments" ); break;
+                }
 
-                    if ( numTokens > 2 && numTokens > 6 ) {
-                        warning( "run: too much arguments" );
-                        break;
-                    }
+                pid_t pid;
 
-                    pid = run( tokens[1], tokens );
+                pid = run( tokens[1], tokens );
+                if (pid > 0) {
+                    
+                    char command[MAXCHARS];
+                    memset( command, 0, sizeof(command) );
 
-                    if (pid > 0) {
-                        for ( int i = 0; i < NTASK; i++ ) {
-                            if ( taskList[i].index == -1 && taskList[i].pid == -1 ) {
-                                taskList[i].index = i;
-                                taskList[i].pid = pid;
-                                numTasks++;
-                                break;
-                            }
+                    for ( int i = 1; i < numTokens; i++ )
+                        strcat( command, tokens[i] );
+
+
+                    for ( int i = 0; i < NTASK; i++ ) {
+                        if ( taskList[i].index == -1 && taskList[i].pid == -1 ) {
+                            taskList[i].index = i;
+                            taskList[i].pid = pid;
+                            strcpy( taskList[i].command, command );
+                            numTasks++;
+                            break;
                         }
                     }
                 }
@@ -132,6 +137,7 @@ int main () {
 
                 taskList[taskNo].index = -1;
                 taskList[taskNo].pid = -1;
+                
                 numTasks--;
 
                 break;
@@ -139,37 +145,15 @@ int main () {
             case 7:
                 break;
             case 8:
-                exitFlag = 1;
-                
-                for ( int i = 0; i < NTASK; i++ ) {
-                    if ( taskList[i].pid != -1 )
-                        terminate(taskList[i].pid);
-                }
-
-                break;
+                xexit( tmsStart, taskList );
+                return 0;
             case 9:
-                exitFlag = 1;
-                break;
+                xexit( tmsStart, NULL );
+                return 0;
         }
 
         printf( "msh379 [%d]: ", parent_pid );
         memset( inStr, 0, sizeof(inStr) );
         memset( tokens, 0, sizeof(tokens) );
-
-        if ( exitFlag ) break;
     }
-
-
- /* --------- Stop time recording --------- */
-    struct tms tmsEnd;
-    memset( &tmsEnd, 0, sizeof(tmsEnd) );
-
-    clock_t endWallTime = times(&tmsEnd);
-    if ( endWallTime == -1 )
-        warning( "Fail to end recording user CPU time\n" );
-
-    printf("\n");
-    printTime(endWallTime - startWallTime, &tmsStart, &tmsEnd);
-
-    return 0;
 }
