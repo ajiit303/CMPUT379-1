@@ -5,6 +5,7 @@
 #include "utils.h"
 
 
+// Hardcoded information for each command
 static const struct CommandDB commands[NCMD] = {
     {"cdir", 1, REQUIRE},
     {"pdir", 0, OPTIONAL},
@@ -18,71 +19,99 @@ static const struct CommandDB commands[NCMD] = {
     {"quit", 0, OPTIONAL}
 };
 
-void cdir (char *pathname) {
+void cdir (char *path) {
 
-    if ( strlen(pathname) == 0 )
+    if ( strlen(path) == 0 )
         return;
 
-    char folders[MAXNTOKENS][MAXCHARS];
-    char envVars[MAXCHARS][MAXCHARS];
-    char pathnameEnv[MAXLEN];
+    char folders[MAXNTOKENS][MAXCHARS]; // Array of folders name in a path
+    char envVars[MAXCHARS][MAXCHARS]; // Array of enviromental variables 
+    char pathParsed[MAXLEN]; // Path after parsing all the environmental variable
     
+    // Zero out
     memset( &folders, 0, sizeof(folders) );
     memset( &envVars, 0, sizeof(envVars) );
-    memset( &pathnameEnv, 0, sizeof(pathnameEnv) );
+    memset( &pathParsed, 0, sizeof(pathParsed) );
 
-    int numFolders = split( pathname, folders, "/" );
+    // Split the path into each individual folder name "/"
+    int numFolders = split( path, folders, "/" );
     for ( int i = 0; i < numFolders; i++ ) {
         
-        if ( strchr( folders[i], '$' ) ) {
-            int numMatch = gsub( folders[i], "$", "|&" );
+        /* 
+         * A folder name is a pure environmental variable
+         * or part of a folder name contains one or more 
+         * environmental variables.
+         */ 
 
+        if ( strchr( folders[i], '$' ) ) {
+
+            /*
+             * Omit "$" from the environmental variable and replaced 
+             * by "|&". "|" is to separate all the environmental 
+             * variables as well as normal string. "&" is to identify
+             * all the enviromental variables from other normal strings
+             * 
+             * Example: 
+             * folders[i] = myproject$HOME$PWD
+             * after gsub
+             * folders[i] = myproject|&HOME|&PWD
+             * after split
+             * envVars = { myproject, &HOME, &PWD }
+             */
+
+            int numMatch = gsub( folders[i], "$", "|&" );
             int numEnvVar = split( folders[i], envVars, "|" );
 
             memset(folders[i], 0, sizeof(folders[i]));
 
+            // Replace each environmental variable with its value
             for ( int j = 0; j < numEnvVar; j++) {
                 
                 if ( startWith( envVars[j], '&' ) ) {
-                    char *envPath = NULL;
+                    char *envVal = NULL;
                     size_t bufferSize;
                     
-                    envPath = pathAlloc(&bufferSize);
+                    envVal = pathAlloc(&bufferSize);
                     
                     gsub( envVars[j], "&", "" );
-                    strcpy( envPath, envVars[j] );
-                    if ( envPath != NULL && xgetenv(envPath) != 0) {
+                    strcpy( envVal, envVars[j] );
+                    if ( envVal != NULL && xgetenv(envVal) != 0) {
                         memset( envVars[j], 0, sizeof(envVars[j]) );
-                        strcpy( envVars[j], envPath );
+                        strcpy( envVars[j], envVal );
                     }
 
-                    free(envPath);
+                    free(envVal);
                 } 
-                    
+                
+                // Concatenate each environmental value and normal string to 
+                // form a folder name
                 strcat( folders[i], envVars[j] );
             }
         }
 
-        strcat( pathnameEnv, folders[i] );
-        strcat( pathnameEnv, "/" );
+        // Concatenate each folder name to get a path
+        strcat( pathParsed, folders[i] );
+        strcat( pathParsed, "/" );
     }
 
-    if ( !startWith(pathnameEnv, '/' ) ) {
+    // If a path is a relative path, attach the absolute path of the current 
+    // directory 
+    if ( !startWith(pathParsed, '/' ) ) {
         char *cwd = NULL;
 
         cwd = xgetcwd();
 
         if ( cwd != NULL ) {
             strcat( cwd, "/" );
-            strcat( cwd, pathnameEnv );
-            strcpy( pathnameEnv, cwd );
+            strcat( cwd, pathParsed );
+            strcpy( pathParsed, cwd );
         }
     }
 
-    if ( chdir(pathnameEnv) < 0 )
-        warning( "cdir: %s: No such file or directory\n", pathname );
+    if ( chdir(pathParsed) < 0 )
+        warning( "cdir: %s: No such file or directory\n", pathParsed );
     else 
-        printf( "cdir: change directory successfully\n" );
+        printf( "cdir: done (pathname=%2s)", pathParsed );
 }
 
 int checkArgs ( int cmdIndex, int numArgs ) {
@@ -133,10 +162,10 @@ int getcmdIndex (char *command) {
 }
 
 void lstasks (struct TaskDB *taskList) {
-    printf( "%s %10s\n", "Index", "Pid" );
+    printf( "%s%11s%5s\n", "Index", "Pid", "Cmd" );
     for ( int i = 0; i < NTASK; i++ ) {
         if (taskList[i].pid != -1)
-            printf( "%d%15d\n", taskList[i].index, taskList[i].pid );
+            printf( "%d%15d%7s\n", taskList[i].index, taskList[i].pid, taskList[i].command );
     }
 }
 
@@ -171,7 +200,7 @@ pid_t run ( char *pgm, char **args ) {
     return pid;
 }
 
-void stop ( pid_t pid ) {
+void stop (pid_t pid) {
     if ( kill( pid, SIGSTOP ) == -1)
         fatal( "stop: cannot stop task %d\n", pid );
     else {
@@ -186,7 +215,7 @@ void stop ( pid_t pid ) {
     }
 }
 
-void terminate ( pid_t pid ) {
+void terminate (pid_t pid) {
     if ( kill( pid, SIGKILL ) == -1 )
         fatal( "stop: cannot stop task %d\n", pid );
     else {
@@ -194,14 +223,11 @@ void terminate ( pid_t pid ) {
         if ( waitpid( pid, &status, WUNTRACED ) != pid )
             fatal( "terminate: cannot get status of task %d\n", pid );
         
-        if ( !WIFSIGNALED(status) )
-            fatal( "terminate: cannot terminate task %d\n", pid );
-        else
-            printf( "terminate: task %d terminated\n", pid );
+        printf( "task %d terminated\n", pid );
     }
 }
 
-void xcontinue ( pid_t pid ) {
+void xcontinue (pid_t pid) {
     if ( kill( pid, SIGCONT ) == -1 )
         fatal( "continue: cannot continue task %d\n", pid );
     else {
@@ -214,6 +240,25 @@ void xcontinue ( pid_t pid ) {
         else
             printf( "continue: task %d is resumed\n", pid );
     }
+}
+
+void xexit ( struct tms *start, struct TaskDB *taskList ) {
+    if ( taskList != NULL ) {
+        for ( int i = 0; i < NTASK; i++ ) {
+            if ( taskList[i].pid != -1 )
+                terminate(taskList[i].pid);
+        }
+    }
+
+    struct tms tmsEnd;
+    memset( &tmsEnd, 0, sizeof(tmsEnd) );
+
+    clock_t endWallTime = times(&tmsEnd);
+    if ( endWallTime == -1 )
+        warning( "Fail to end recording user CPU time\n" );
+
+    printf("\n");
+    printTime(endWallTime - startWallTime, tmsStart, &tmsEnd);
 }
 
 char *xgetcwd () {
