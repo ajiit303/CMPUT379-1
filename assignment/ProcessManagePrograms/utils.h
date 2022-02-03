@@ -20,6 +20,7 @@
 struct TaskDB {
     char command[MAXLEN];
     int index;
+    int running;
     pid_t pid;
 };
 
