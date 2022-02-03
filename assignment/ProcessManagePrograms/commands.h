@@ -7,7 +7,7 @@
 #define COMMANDS_H
 #define NCMD 10
 #define NARG 6
-#define MAXBUF 256
+#define MAXBUF 1024
 #define REQUIRE 0
 #define OPTIONAL 1
 
@@ -36,9 +36,9 @@ void lstasks (struct TaskDB *taskList);
 
 pid_t run ( char *pgm, char args[][MAXCHARS], int numArgs );
 
-void stop ( pid_t pid );
+int stop ( pid_t pid );
 
-void xcontinue ( pid_t pid );
+int xcontinue ( pid_t pid );
 
 void terminate ( pid_t pid );
 
