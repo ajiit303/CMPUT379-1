@@ -122,7 +122,7 @@ void check (char *targetId) {
 
     char buf[MAXBUF];
     char line[MAXBUF];
-    int pidList[NTASK];
+    int pidList[MAXNTOKENS];
     char tokens[4][MAXCHARS];
 
     numPid = 0;
@@ -261,7 +261,7 @@ pid_t run ( char *pgm, char args[][MAXCHARS], int numArgs ) {
 
     if ( pid > 0 )
         printf( "run: new processes is created\n" );
-    
+
     if ( pid == 0 && strlen(pgm) != 0 ) {
         char *argv[NARG];
         
@@ -279,24 +279,30 @@ pid_t run ( char *pgm, char args[][MAXCHARS], int numArgs ) {
     return pid;
 }
 
-void stop ( pid_t pid ) {
+int stop ( pid_t pid ) {
+    int status = 0;
+
     if ( kill( pid, SIGSTOP ) == -1)
         fatal( "stop: cannot stop task %d\n", pid );
     else {
-        int status;
         if ( waitpid( pid, &status, WUNTRACED ) != pid )
-            fatal( "stop: cannot get status of task %d\n" );
+            fatal( "stop: cannot get status of task %d\n", pid );
         
-        if ( !WSTOPSIG(status) )
-            fatal( "stop: cannot stop task %d\n" );
-        else
+        if ( !WSTOPSIG(status) ) {
+            fatal( "stop: cannot stop task %d\n", pid );
+            status = 0;
+        } else {
             printf( "stop: task %d stopped\n", pid );
+            status = 1;
+        }
     }
+
+    return status;
 }
 
 void terminate ( pid_t pid ) {
     if ( kill( pid, SIGKILL ) == -1 )
-        fatal( "stop: cannot stop task %d\n", pid );
+        fatal( "terminate: cannot terminate task %d\n", pid );
     else {
         int status;
         if ( waitpid( pid, &status, WUNTRACED ) != pid )
@@ -306,19 +312,25 @@ void terminate ( pid_t pid ) {
     }
 }
 
-void xcontinue ( pid_t pid ) {
+int xcontinue ( pid_t pid ) {
+    int status = 0;
+
     if ( kill( pid, SIGCONT ) == -1 )
         fatal( "continue: cannot continue task %d\n", pid );
     else {
-        int status;
         if ( waitpid( pid, &status, WCONTINUED ) != pid )
             fatal( "continue: cannot get status of task %d\n", pid );
         
-        if ( !WIFCONTINUED(status) )
+        if ( !WIFCONTINUED(status) ) {
             fatal( "continue: cannot continue task %d\n", pid );
-        else
+            status = 0;
+        } else {
             printf( "continue: task %d is resumed\n", pid );
+            status = 1;
+        }
     }
+
+    return status;
 }
 
 void xexit ( clock_t startWallTime, struct tms *tmsStart, struct TaskDB *taskList ) {
@@ -334,7 +346,7 @@ void xexit ( clock_t startWallTime, struct tms *tmsStart, struct TaskDB *taskLis
 
     clock_t endWallTime = times(&tmsEnd);
     if ( endWallTime == -1 )
-        warning( "Fail to end recording user CPU time\n" );
+        warning( "cannot end recording user CPU time\n" );
 
     printf("\n");
     printTime(endWallTime - startWallTime, tmsStart, &tmsEnd);
