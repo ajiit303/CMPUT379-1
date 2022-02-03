@@ -83,7 +83,7 @@ int main () {
             case 2:
                 lstasks(taskList); break;
             case 3:
-                if (numTasks == NTASK - 1) {
+                if (numTasks == NTASK) {
                     warning( "run: number of task limit reached, cannot run more task\n" ); break;
                 }
 
@@ -110,6 +110,7 @@ int main () {
                         if ( taskList[i].index == -1 && taskList[i].pid == -1 ) {
                             taskList[i].index = i;
                             taskList[i].pid = pid;
+                            taskList[i].running = 1;
                             strcpy( taskList[i].command, command );
                             numTasks++;
                             break;
@@ -121,14 +122,22 @@ int main () {
             case 4: {
                 int taskNo = getTaskNo( tokens[0], tokens[1], numTasks, taskList );
                 if ( taskNo == -1 ) break;
-                stop(taskList[taskNo].pid);
-                
+                if (!taskList[taskNo].running) warning( "stop: taskNo %d is already stopped\n", taskNo );
+                else {
+                    if(stop(taskList[taskNo].pid))
+                        taskList[taskNo].running = 0;
+                }
+
                 break;
             }
             case 5: {
                 int taskNo = getTaskNo( tokens[0], tokens[1], numTasks, taskList );
                 if ( taskNo == -1 ) break;
-                xcontinue(taskList[taskNo].pid);
+                if (taskList[taskNo].running) warning( "continue: taskNo %d is already running\n", taskNo );
+                else { 
+                    if (xcontinue(taskList[taskNo].pid))
+                        taskList[taskNo].running = 1;
+                }
                 
                 break;
             }
@@ -140,6 +149,7 @@ int main () {
 
                 taskList[taskNo].index = -1;
                 taskList[taskNo].pid = -1;
+                taskList[taskNo].running = 0;
 
                 numTasks--;
 
