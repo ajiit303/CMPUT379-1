@@ -122,7 +122,7 @@ void check (char *targetId) {
 
     char buf[MAXBUF];
     char line[MAXBUF];
-    int pidList[MAXNTOKENS];
+    int pidList[NTASK]; // if the number set it too high, it broke for some reason
     char tokens[4][MAXCHARS];
 
     numPid = 0;
