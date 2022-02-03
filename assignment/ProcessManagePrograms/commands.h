@@ -22,13 +22,15 @@ struct CommandDB {
 
 void cdir (char *pathname);
 
-void check (pid_t pid);
+void check (char *targetId);
 
 int checkArgs ( int cmdIndex, int numArgs );
 
 int getTaskNo ( char *cmdName, char *strTaskNo, int numTasks, struct TaskDB *taskList );
 
 int getcmdIndex (char *command);
+
+int isChildPs ( int ppid, int pidList[], int numPid );
 
 void lstasks (struct TaskDB *taskList);
 

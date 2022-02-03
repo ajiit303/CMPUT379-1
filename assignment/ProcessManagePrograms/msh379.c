@@ -97,12 +97,14 @@ int main () {
                 if ( pid == 0 ) return 0;
 
                 if ( pid > 0 ) {
-
+                    sleep(1);
                     char command[MAXCHARS];
                     memset( command, 0, sizeof(command) );
 
-                    for ( int i = 1; i < numTokens; i++ )
+                    for ( int i = 1; i < numTokens; i++ ) {
+                        strcat( command, " " );
                         strcat( command, tokens[i] );
+                    }
 
                     for ( int i = 0; i < NTASK; i++ ) {
                         if ( taskList[i].index == -1 && taskList[i].pid == -1 ) {
@@ -144,6 +146,7 @@ int main () {
                 break;
             }
             case 7:
+                check(tokens[1]);
                 break;
             case 8:
                 xexit( startWallTime, &tmsStart, taskList );

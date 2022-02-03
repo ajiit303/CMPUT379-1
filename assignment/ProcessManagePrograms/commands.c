@@ -59,7 +59,7 @@ void cdir (char *path) {
              * envVars = { myproject, &HOME, &PWD }
              */
 
-            int numMatch = gsub( folders[i], "$", "|&" );
+            gsub( folders[i], "$", "|&" );
             int numEnvVar = split( folders[i], envVars, "|" );
 
             memset(folders[i], 0, sizeof(folders[i]));
@@ -114,21 +114,64 @@ void cdir (char *path) {
         printf( "cdir: done (pathname=%2s)\n", pathParsed );
 }
 
-void check (pid_t pid) {
+void check (char *targetId) {
+    int numPid;
+    int status;
+    int targetPid;
+    FILE *file;
+
     char buf[MAXBUF];
-    int status = 0;
-    int countline = 0;
-    FILE *file = NULL;
+    char line[MAXBUF];
+    int pidList[NTASK];
+    char tokens[4][MAXCHARS];
+
+    numPid = 0;
+    targetPid = atoi(targetId);
 
     memset( &buf, 0, sizeof(buf) );
-    file = popen( "ps -u $USER -o user,pid,ppid,state,start,cmd --sort start", "r" );
-    
-    if (file) {
-        char tokens[6][MAXCHARS];
+    memset( &line, 0, sizeof(line) );
+    memset( &pidList, 0, sizeof(pidList) );
+    memset( &tokens, 0, sizeof(tokens) );
 
-        while ( fgets( buf, MAXBUF, file ) != NULL ) {
-            int numTokens = split( buf, tokens, " " );
-            printf( "%s\n", tokens[1] );
+    file = popen( "ps -u $USER -o user,pid,ppid,state,start,cmd --sort start", "r" );
+    if (file) {
+        while ( fgets( line, MAXBUF, file ) != NULL ) {
+            if ( strstr( line, "USER" ) ) {
+                printf( "%s", line );
+                continue;
+            }
+
+            strcpy( buf, line );
+            
+            split( buf, tokens, " " );
+            int pid = atoi(tokens[1]);
+            int ppid = atoi(tokens[2]);
+            char *state = tokens[3];
+
+            if ( pid == targetPid ) {
+                printf( "%s", line );
+                if ( strcmp( state, "Z" ) == 0 ) break;
+                
+                pidList[numPid] = pid;
+                numPid++;
+                continue;
+            }
+
+            if ( ppid == targetPid ) {
+                printf( "%s", line );
+                
+                pidList[numPid] = pid;
+                numPid++;
+                continue;
+            }
+
+            if ( isChildPs( ppid, pidList, numPid ) ) {
+                printf( "%s", line );
+
+                pidList[numPid] = pid;
+                numPid++;
+                continue;
+            }
         }
     }
 
@@ -184,11 +227,18 @@ int getcmdIndex (char *command) {
     return cmdIndex;
 }
 
+int isChildPs ( int ppid, int pidList[], int numPid ) {
+    for ( int i = 0; i < numPid; i++ ) {
+        if ( pidList[i] == ppid ) return 1;
+    }
+
+    return 0;
+}
+
 void lstasks (struct TaskDB *taskList) {
-    printf( "%s%11s%5s\n", "Index", "Pid", "Cmd" );
     for ( int i = 0; i < NTASK; i++ ) {
         if (taskList[i].pid != -1)
-            printf( "%d%15d%7s\n", taskList[i].index, taskList[i].pid, taskList[i].command );
+            printf( "%d: (pid= %d, cmd= %s)\n", taskList[i].index, taskList[i].pid, taskList[i].command );
     }
 }
 
