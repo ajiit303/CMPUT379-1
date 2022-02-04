@@ -5,7 +5,7 @@
 int gsub ( char *inStr, char *filter, char *repStr ) {
     int numMatch = 0;
     int matched;
-    char outStr[MAXLEN];
+    char outStr[MAXLEN]; // output string without omitted string
     memset( outStr, 0, sizeof(outStr) );
 
     for ( size_t i = 0; i < strlen(inStr); i++ ) {
@@ -16,6 +16,7 @@ int gsub ( char *inStr, char *filter, char *repStr ) {
         // provided characters for matching
         for ( size_t j = 0; j < strlen(filter); j++ ) {
             if ( inStr[i] == filter[j] ) {
+                // find a match, append it with the replacement string
                 strcat( outStr, repStr );
 
                 matched = 1;
@@ -25,19 +26,20 @@ int gsub ( char *inStr, char *filter, char *repStr ) {
             }
         }
 
+        // No match, append it normally without modification
         if (matched == 0) {
             outStr[ strlen(outStr) ] = inStr[i];
         }
     }
 
     memset( inStr, 0, sizeof(inStr) );
-    strcpy( inStr, outStr );
+    strcpy( inStr, outStr );  // copy the output string to input string
 
     return numMatch;
 }
 
 void printTime ( clock_t wallTime, struct tms *tmsStart, struct tms *tmsEnd ) {
-    long clockTick = 0;
+    long clockTick = 0; // unit, clock ticks per second
 
     if ( clockTick == 0 ) {
         if ( (clockTick = sysconf(_SC_CLK_TCK)) < 0 ) {
@@ -62,7 +64,7 @@ void printTime ( clock_t wallTime, struct tms *tmsStart, struct tms *tmsEnd ) {
 }
 
 char *pathAlloc (size_t *sizePtr) {
-    char *ptr = NULL;
+    char *ptr = NULL; 
     int errno = 0;
     size_t size = 0;
 
@@ -70,13 +72,15 @@ char *pathAlloc (size_t *sizePtr) {
         errno = 0;
 
         if ( ( maxPath = pathconf( "/", _PC_PATH_MAX ) ) < 0 ) {
+            // obtain the max buffer size of path from macro _PC_PATH_MAX
             if ( errno == 0 ) {
+                // Guess the max buffer size of path if it cannot obtain the macro
                 maxPath = GUESSPATHLEN;
             } else {
                 warning( "pathconf error for _PC_PATH_MAX\n" );
             }
         } else {
-            maxPath++;
+            maxPath++; // extra byte for null character
         }
     }
 
@@ -106,7 +110,8 @@ int split ( char *inStr, char tokens[][MAXCHARS], char fs[] ) {
     while ( token != NULL ) {
         strcpy(tokens[numToken++], token);
 
-        token = strtok( NULL, fs );
+        // continue to consume the previous input buffer to split 
+        token = strtok( NULL, fs ); 
     }
 
     token = NULL;

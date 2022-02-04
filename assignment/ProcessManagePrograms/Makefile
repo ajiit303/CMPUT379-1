@@ -1,5 +1,5 @@
 target=		submit
-allFiles=       Makefile commands.c handler.c msh379.c utils.c commands.h handler.h utils.h
+allFiles=       Makefile commands.c handler.c msh379.c utils.c commands.h handler.h utils.h mMyclock.sh myclock.sh
 scpDir=		chengxua@ub05.cs.ualberta.ca:~/379
 # ------------------------------------------------------------
 

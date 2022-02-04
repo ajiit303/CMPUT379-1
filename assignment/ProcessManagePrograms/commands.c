@@ -120,17 +120,23 @@ void check (char *targetId) {
     int targetPid;
     FILE *file;
 
-    char buf[MAXBUF];
+    // buffer used for split function, prevent split modified the input string
+    char buf[MAXBUF]; 
     char line[MAXBUF];
-    int pidList[NTASK]; // if the number set it too high, it broke for some reason
+    // a list of pids of processes that are child of a parent process
+    int *pidList = NULL; 
+    // Information of a process after split a line from input of ps
+    // It contains : user, pid, ppid and state
     char tokens[4][MAXCHARS];
 
     numPid = 0;
     targetPid = atoi(targetId);
 
+    pidList = (int *)malloc( 128 * sizeof(int) );
+
+    // zero out
     memset( &buf, 0, sizeof(buf) );
     memset( &line, 0, sizeof(line) );
-    memset( &pidList, 0, sizeof(pidList) );
     memset( &tokens, 0, sizeof(tokens) );
 
     file = popen( "ps -u $USER -o user,pid,ppid,state,start,cmd --sort start", "r" );
@@ -141,6 +147,10 @@ void check (char *targetId) {
                 continue;
             }
 
+            // omit process of ps if target id of the process is msh379
+            if ( strstr( line, "ps -u" ) ) continue;
+
+            // copy input line into split buffer
             strcpy( buf, line );
             
             split( buf, tokens, " " );
@@ -150,13 +160,17 @@ void check (char *targetId) {
 
             if ( pid == targetPid ) {
                 printf( "%s", line );
-                if ( strcmp( state, "Z" ) == 0 ) break;
-                
+                // process is not running
+                if ( strcmp( state, "Z" ) == 0 ) 
+                    break;
+        
                 pidList[numPid] = pid;
                 numPid++;
                 continue;
             }
 
+            // That ppid of a process is equal to the target pid means
+            // this process is a child process
             if ( ppid == targetPid ) {
                 printf( "%s", line );
                 
@@ -165,6 +179,8 @@ void check (char *targetId) {
                 continue;
             }
 
+            // If ppid of a process is in a list of pids of processes that are 
+            // child of a parent process, this process is a descendant process.
             if ( isChildPs( ppid, pidList, numPid ) ) {
                 printf( "%s", line );
 
@@ -178,10 +194,13 @@ void check (char *targetId) {
     status = pclose(file);
     if ( status == -1 )
         fatal( "check: cannot close the pipe\n" );
+
+    free(pidList);
 }
 
 int checkArgs ( int cmdIndex, int numArgs ) {
     if ( commands[cmdIndex].optional )
+        // There are no hard requirement for number of arguments for this command
         return 1;
     
     if ( numArgs > commands[cmdIndex].numArgs ) {
@@ -235,9 +254,23 @@ int isChildPs ( int ppid, int pidList[], int numPid ) {
     return 0;
 }
 
-void lstasks (struct TaskDB *taskList) {
-    for ( int i = 0; i < NTASK; i++ ) {
-        if (taskList[i].pid != -1)
+int isZombie (pid_t pid) {
+    int status = 0;
+
+    sleep(1);
+    
+    if ( waitpid( pid, &status, WNOHANG ) == pid ) {
+        warning( "run: new process is terminated immedately after created\n" );
+        warning( "run: process %d is marked as terminated\n", pid );
+        return 1;
+    }
+
+    return 0;
+}
+
+void lstasks (struct TaskDB *taskList, int numTasks) {
+    for ( int i = 0; i < numTasks; i++ ) {
+        if (taskList[i].running != -1)
             printf( "%d: (pid= %d, cmd= %s)\n", taskList[i].index, taskList[i].pid, taskList[i].command );
     }
 }
@@ -245,6 +278,7 @@ void lstasks (struct TaskDB *taskList) {
 void pdir () {
     char *cwd = NULL;
     
+    // Call xgetcwd() to get the path of current directory
     cwd = xgetcwd();
 
     if ( cwd != NULL )
@@ -256,24 +290,28 @@ void pdir () {
 pid_t run ( char *pgm, char args[][MAXCHARS], int numArgs ) {
     pid_t pid;
 
-    if ( ( pid = fork() ) < 0 ) 
+    if ( ( pid = fork() ) < 0 )
         warning( "run: fork error\n" );
 
     if ( pid > 0 )
-        printf( "run: new processes is created\n" );
+        printf( "run: new process is created\n" );
 
     if ( pid == 0 && strlen(pgm) != 0 ) {
         char *argv[NARG];
         
         argv[0] = pgm;
 
+        // Construct an array of arugments for execvp
         for (int i = 0 ; i <= numArgs; i++ )
             argv[i+1] = args[i+2];
 
+        // null pointer for arguments
         argv[numArgs+1] = NULL;
 
-        if ( execvp( pgm, argv ) < 0 )
+        if ( execvp( pgm, argv ) < 0 ) {
             warning( "run: cannot run %s\n", pgm );
+            exit(EXIT_FAILURE);
+        }
     }
 
     return pid;
@@ -288,6 +326,8 @@ int stop ( pid_t pid ) {
         if ( waitpid( pid, &status, WUNTRACED ) != pid )
             fatal( "stop: cannot get status of task %d\n", pid );
         
+        // using macro funciton WSTOPSIG to check status to ensure the process 
+        // truly stopped
         if ( !WSTOPSIG(status) ) {
             fatal( "stop: cannot stop task %d\n", pid );
             status = 0;
@@ -302,7 +342,7 @@ int stop ( pid_t pid ) {
 
 void terminate ( pid_t pid ) {
     if ( kill( pid, SIGKILL ) == -1 )
-        fatal( "terminate: cannot terminate task %d\n", pid );
+        fatal( "terminate: cannot terminate task %d normally", pid );
     else {
         int status;
         if ( waitpid( pid, &status, WUNTRACED ) != pid )
@@ -318,9 +358,12 @@ int xcontinue ( pid_t pid ) {
     if ( kill( pid, SIGCONT ) == -1 )
         fatal( "continue: cannot continue task %d\n", pid );
     else {
-        if ( waitpid( pid, &status, WCONTINUED ) != pid )
+        // enable status check after send SIGCONT by using WCONTINUED option 
+        if ( waitpid( pid, &status, WCONTINUED ) != pid ) 
             fatal( "continue: cannot get status of task %d\n", pid );
         
+        // using macro funciton WIFCONTINUED to check status to ensure the process 
+        // truly continue
         if ( !WIFCONTINUED(status) ) {
             fatal( "continue: cannot continue task %d\n", pid );
             status = 0;
@@ -333,14 +376,16 @@ int xcontinue ( pid_t pid ) {
     return status;
 }
 
-void xexit ( clock_t startWallTime, struct tms *tmsStart, struct TaskDB *taskList ) {
+void xexit ( clock_t startWallTime, int numTasks, struct tms *tmsStart, struct TaskDB *taskList ) {
+    // terminate all tasks that are not terminated
     if ( taskList != NULL ) {
-        for ( int i = 0; i < NTASK; i++ ) {
-            if ( taskList[i].pid != -1 )
+        for ( int i = 0; i < numTasks; i++ ) {
+            if ( taskList[i].running != -1 )
                 terminate(taskList[i].pid);
         }
     }
 
+    // end time recording and calculate time
     struct tms tmsEnd;
     memset( &tmsEnd, 0, sizeof(tmsEnd) );
 
@@ -356,6 +401,7 @@ char *xgetcwd () {
     char *cwd = NULL;
     size_t bufferSize;
 
+    // allocate memory for the path buffer
     cwd = pathAlloc(&bufferSize);
 
     if ( cwd == NULL ) {
@@ -372,6 +418,7 @@ char *xgetcwd () {
 int xgetenv (char *envVar) {
     char *path = NULL;
     
+    // get the value of an environemntal variable
     path = getenv(envVar);
 
     if (path == NULL)
