@@ -225,7 +225,8 @@ int getTaskNo ( char *cmdName, char *strTaskNo, int numTasks, struct TaskDB *tas
     }
 
     taskNo = atoi(strTaskNo);
-    if ( taskNo < 0 || taskNo > NTASK || taskList[taskNo].pid == -1 ) {
+    if ( taskNo < 0 || taskNo > NTASK || 
+        (taskList[taskNo].pid == -1 && taskList[taskNo].running == -1) ) {
         warning( "%s: Invalid taskNo\n", cmdName );
         taskNo = -1;
     }
