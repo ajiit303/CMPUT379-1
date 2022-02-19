@@ -27,7 +27,6 @@ int main ( int argc, char *args[] ) {
         int next = getSwitchNum( string(args[4]) );
 
         string ipRange[2];
-        memset( ipRange, 0, sizeof(ipRange) );
 
         split( string(args[5]), "-", ipRange );
 

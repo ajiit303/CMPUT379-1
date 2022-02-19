@@ -5,6 +5,7 @@
 #define FORWARD 3
 #define MAX_NSW 7
 #define MAXIP 1000
+#define MAXPORT 3
 
 
 #endif

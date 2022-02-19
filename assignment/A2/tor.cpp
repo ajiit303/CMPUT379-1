@@ -3,7 +3,11 @@
 #include <string>
 #include <vector>
 
+#include <fcntl.h>
+#include <unistd.h>
+
 #include "const.h"
+#include "handler.h"
 #include "tor.h"
 
 using namespace std;
@@ -25,6 +29,11 @@ PacketSwitch::PacketSwitch ( int switchNum, int prev, int next, int ipLow, int i
     this->filename = filename;
 
     this->ftable.push_back( Rule(0, MAXIP, this->ipLow, this->ipHigh, FORWARD) );
-
-    memset( fifos[MAX_NSW] )
 }
+
+void PacketSwitch::run() {
+    pfd[0].fd = STDIN_FILENO;
+    pfd[0].events = POLLIN;
+    pfd[0].revents = 0;
+}
+

@@ -1,12 +1,16 @@
 #include <assert.h>
 #include <cstring>
+#include <iostream>
 #include <vector>
 
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
+#include <unistd.h>
+
+#include <sys/stat.h>
+
 
 #include "const.h"
+#include "handler.h"
 #include "master.h"
 #include "tor.h"
 
@@ -21,10 +25,8 @@ MasterSwitch::MasterSwitch (int numSwitch) {
 }
 
 void MasterSwitch::run () {
-    for (size_t i = 1; i < numSwitch; i++)
-    {
-        
-    }
-    
+    pfd[0].fd = STDIN_FILENO;
+    pfd[0].events = POLLIN;
+    pfd[0].revents = 0;
 }
 

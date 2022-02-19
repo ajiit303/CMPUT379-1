@@ -4,6 +4,8 @@
 
 #include <vector>
 
+#include <poll.h>
+
 #include "tor.h"
 
 using namespace std;
@@ -16,9 +18,10 @@ class MasterSwitch {
 
     private:
         int numSwitch;
-        int fifos[MAX_NSW+1][2];
+        int fifos[MAX_NSW][2];
+        struct pollfd pfd[2*MAX_NSW+1];
         vector<PacketSwitch> switches;
-
+        
         int forkSwitches();
 };
 
