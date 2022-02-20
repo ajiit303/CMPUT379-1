@@ -22,9 +22,11 @@ class PacketSwitch {
         int switchNum;
         int prev, next;
         int ipLow, ipHigh;
-        int fifos[MAXPORT][2];
         string filename;
-        struct pollfd pfd[2*MAXPORT+1];
+        
+        int fifos[MAXPORT+1][2];
+        struct pollfd pfds[MAXPORT+1];
+
         vector<Rule> ftable;
 
 };

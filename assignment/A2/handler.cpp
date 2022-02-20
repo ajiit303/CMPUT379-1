@@ -1,5 +1,5 @@
+#include <cstdio>
 #include <stdarg.h>
-#include <stdio.h>
 
 #include "handler.h"
 

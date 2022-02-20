@@ -1,11 +1,11 @@
 target=		submit
-allFiles=       Makefile main.cpp master.cpp rule.cpp tor.cpp utils.cpp const.h master.h rule.h tor.h utils.h
+allFiles=       Makefile handler.cpp main.cpp master.cpp rule.cpp tor.cpp utils.cpp const.h handler.h master.h rule.h tor.h utils.h
 scpDir=		chengxua@ug05.cs.ualberta.ca:~/379
 # ------------------------------------------------------------
 
 
-starter:  main.cpp master.cpp rule.cpp tor.cpp utils.cpp const.h master.h rule.h tor.h utils.h
-	g++ -Wall main.cpp master.cpp rule.cpp tor.cpp utils.cpp -o a2w22
+starter:  handler.cpp main.cpp master.cpp rule.cpp tor.cpp utils.cpp const.h handler.h master.h rule.h tor.h utils.h
+	g++ -Wall handler.cpp main.cpp master.cpp rule.cpp tor.cpp utils.cpp -o a2w22
 
 tar:
 	touch $(target).tar.gz

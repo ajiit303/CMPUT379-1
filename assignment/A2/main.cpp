@@ -38,6 +38,7 @@ int main ( int argc, char *args[] ) {
         PacketSwitch packetSwitch = PacketSwitch( switchNum, prev, next, 
         ipLow, ipHigh, filename );
 
+        packetSwitch.run();
     }
 
     return 0;

@@ -18,8 +18,10 @@ class MasterSwitch {
 
     private:
         int numSwitch;
-        int fifos[MAX_NSW][2];
-        struct pollfd pfd[2*MAX_NSW+1];
+        
+        int fifos[MAX_NSW+1][2];
+        struct pollfd pfds[MAX_NSW+1];
+        
         vector<PacketSwitch> switches;
         
         int forkSwitches();

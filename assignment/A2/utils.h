@@ -9,7 +9,8 @@ using namespace std;
 
 int getSwitchNum (string str);
 
-int split ( string str, string del, string tokens[] );
+void mkopen( int s1, int s2, int &rfd, int &wfd );
 
+int split ( string str, string del, string tokens[] );
 
 #endif
