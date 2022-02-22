@@ -1,3 +1,5 @@
+#include <string>
+
 #include <assert.h>
 
 #include "const.h"
@@ -6,8 +8,8 @@
 using namespace std;
 
 
-Rule::Rule (int srcIP_lo, int srcIP_hi, int destIP_lo, int destIP_hi, 
-    int actionVal ) {
+Rule::Rule ( int srcIP_lo, int srcIP_hi, int destIP_lo, int destIP_hi, 
+    int actionType, int actionVal ) {
     
     assert( srcIP_lo < srcIP_hi && srcIP_lo >= 0 );
     assert( srcIP_hi <= MAXIP );
@@ -18,5 +20,10 @@ Rule::Rule (int srcIP_lo, int srcIP_hi, int destIP_lo, int destIP_hi,
     this->srcIP_hi = srcIP_hi;
     this->destIP_lo = destIP_lo;
     this->destIP_hi = destIP_hi;
+    this->actionType = actionType;
     this->actionVal = actionVal;
+}
+
+ostream& operator<< ( ostream& outs, const Rule& obj ) {
+    
 }

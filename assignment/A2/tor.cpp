@@ -1,13 +1,14 @@
 #include <assert.h>
 #include <cstring>
+#include <iostream>
 #include <string>
 #include <vector>
 
-#include <fcntl.h>
 #include <unistd.h>
 
 #include "const.h"
 #include "handler.h"
+#include "message.h"
 #include "tor.h"
 #include "utils.h"
 
@@ -29,37 +30,68 @@ PacketSwitch::PacketSwitch ( int switchNum, int prev, int next, int ipLow, int i
     this->ipHigh = ipHigh;
     this->filename = filename;
 
-    this->ftable.push_back( Rule(0, MAXIP, this->ipLow, this->ipHigh, FORWARD) );
+    this->ftable.push_back( Rule(0, MAXIP, this->ipLow, this->ipHigh, FORWARD, 3) );
 }
 
-void PacketSwitch::run() {
+int PacketSwitch::getSwitchNum () {
+    return switchNum;
+}
+
+int PacketSwitch::getPrev () {
+    return prev;
+}
+
+int PacketSwitch::getNext () {
+    return next;
+}
+
+int PacketSwitch::getIPLow () {
+    return ipLow;
+}
+
+int PacketSwitch::getIPHigh () {
+    return ipHigh;
+}
+
+void PacketSwitch::initFIFO () {
+    int count = 0;
+
     fifos[0][0] = STDIN_FILENO;
     fifos[0][1] = STDOUT_FILENO;
-
-    pfds[0].fd = STDIN_FILENO;
-    pfds[0].events = POLLIN;
-    pfds[0].revents = 0;
+    setPfd( count, fifos[0][0] );
+    count++;
 
     mkopen( 0, switchNum, fifos[1][0], fifos[1][1] );
 
-    pfds[1].fd = fifos[1][0];
-    pfds[1].events = POLLIN;
-    pfds[1].revents = 0;
+    setPfd( count, fifos[1][0] );
+    count++;
 
     if ( prev != -1 ) {
-        mkopen( switchNum, prev, fifos[2][0], fifos[2][1] );
-        pfds[2].fd = fifos[2][0];
-        pfds[2].events = POLLIN;
-        pfds[2].revents = 0;
+        mkopen( prev, switchNum, fifos[2][0], fifos[2][1] );
+        setPfd( count, fifos[2][0] );
+        count++;
     }
 
     if ( next != -1 ) {
         mkopen( next, switchNum, fifos[3][0], fifos[3][1] );
-        pfds[3].fd = fifos[3][0];
-        pfds[3].events = POLLIN;
-        pfds[3].revents = 0;
+        setPfd( count, fifos[3][0] );
+        count++;
     }
-    
+}
+
+void PacketSwitch::printFtable () {
+    for ( auto it = ftable.begin(); it != ftable.end(); it++ ) {
+        
+    }
+}
+
+void PacketSwitch::setPfd ( int i, int rfd ) {
+    pfds[i].fd = rfd;
+    pfds[i].events = POLLIN;
+    pfds[i].revents = 0;
+}
+
+void PacketSwitch::startPoll () {
     int in = 0;
     int rval = 0;
     int len = 0;
@@ -67,12 +99,34 @@ void PacketSwitch::run() {
     char buf[MAXBUF];
     memset( buf, 0, sizeof(buf) );
 
-    strcpy( buf, "hello" );
+    cout << "start polling" << endl;
 
-    write( fifos[1][1], buf, sizeof(buf) );
+    sendHELLO();
 
     while (1) {
-        rval = poll( pfds, MAXPORT + 1, 0 );
+        rval = poll( pfds, MAXPKFD, 0 );
+        for ( in = 0; in < MAXPKFD; in++ ) {
+            if ( pfds[in].revents && POLLIN ) {
+                len = read( fifos[in][0], buf, MAXBUF );
+                
+                if ( in == 0 ) {
+                    if ( strcpy( buf, "info" ) == 0 )
+                        
+                }
+            }
+        }
     }
 }
 
+void PacketSwitch::sendHELLO () {
+    Packet helloPk = composeHELLO( switchNum, prev, next, ipLow, ipHigh );
+    sendFrame( fifos[1][1], HELLO, &helloPk );
+
+    string header = 
+        "Transmitted (src = psw" + to_string(switchNum) + "dest= master) [HELLO]: ";
+    
+    string pkContent = 
+        "(port0 = master, port1 = " + ( ( prev == -1 ) ? "null" : to_string(prev) ) +
+        ",port2 = " + ( ( next == -1 ) ? "null" : to_string(next) )+ 
+        ",port3 = " + to_string(ipLow) + "-" + to_string(ipHigh);
+}

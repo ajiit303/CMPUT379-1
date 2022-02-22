@@ -14,17 +14,21 @@ using namespace std;
 class MasterSwitch {
     public:
         MasterSwitch (int numSwitch);
-        void run();
+        void initFIFO ();
+        void startPoll();
 
     private:
         int numSwitch;
         
-        int fifos[MAX_NSW+1][2];
-        struct pollfd pfds[MAX_NSW+1];
+        int fifos[MAXMSFD][2];
+        struct pollfd pfds[MAXMSFD];
         
         vector<PacketSwitch> switches;
         
         int forkSwitches();
+        
+        void setPfd ( int i, int rfd );
+        
 };
 
 

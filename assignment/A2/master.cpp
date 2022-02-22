@@ -8,6 +8,7 @@
 #include "const.h"
 #include "handler.h"
 #include "master.h"
+#include "message.h"
 #include "tor.h"
 #include "utils.h"
 
@@ -21,24 +22,25 @@ MasterSwitch::MasterSwitch (int numSwitch) {
     this->numSwitch = numSwitch;
 }
 
-void MasterSwitch::run () {
+void MasterSwitch::initFIFO () {
     fifos[0][0] = STDIN_FILENO;
     fifos[0][1] = STDOUT_FILENO;
-
-    pfds[0].fd = STDIN_FILENO;
-    pfds[0].events = POLLIN;
-    pfds[0].revents = 0;
+    setPfd( 0, STDIN_FILENO );
 
     for ( int i = 1; i <= numSwitch; i++ ) {
         mkopen( i, 0, fifos[i][0], fifos[i][1] );
+        setPfd( i, fifos[i][0] );
     }
+}
 
-    for ( int i = 1; i <= numSwitch; i++ ) {
-        pfds[i].fd = fifos[i][0];
-        pfds[i].events = POLLIN;
-        pfds[i].revents = 0;
-    }
+void MasterSwitch::setPfd ( int i, int rfd ) {
+    pfds[i].fd = rfd;
+    pfds[i].events = POLLIN;
+    pfds[i].revents = 0;
+}
 
+
+void MasterSwitch::startPoll () {
     int in = 0;
     int len = 0;
     int rval = 0;
@@ -46,16 +48,19 @@ void MasterSwitch::run () {
     char buf[MAXBUF];
     memset( buf, 0, sizeof(buf) );
 
+    cout << "start polling" << endl;
+
     while (1) {
-        rval = poll( pfds, MAX_NSW + 1, 0 );
-        for ( int in = 0; in < MAX_NSW + 1; in++ ) {
+        rval = poll( pfds, MAXMSFD, 0 );
+        for ( in = 0; in < MAXMSFD; in++ ) {
             if ( pfds[in].revents && POLLIN ) {
-                len = read( fifos[in][0], buf, MAXBUF );
-                for ( int i = 0; i < len; i++ ) 
-                    cout << buf[i];
-                cout << endl;
-            }
+                if ( in == 0 ) {
+
+                } else {
+                    Frame frame = rcvFrame( fifos[in][0] );
+
+                }
+            } 
         }
     }
 }
-

@@ -16,7 +16,10 @@ class PacketSwitch {
     public:
         PacketSwitch ( int switchNum, int prev, int next, int ipLow, int ipHigh,
         string filename );
-        void run();
+        void initFIFO();
+        void printFtable();
+        void startPoll();
+        void sendHELLO();
 
     private:
         int switchNum;
@@ -24,10 +27,18 @@ class PacketSwitch {
         int ipLow, ipHigh;
         string filename;
         
-        int fifos[MAXPORT+1][2];
-        struct pollfd pfds[MAXPORT+1];
+        int fifos[MAXPKFD][2];
+        struct pollfd pfds[MAXPKFD];
 
         vector<Rule> ftable;
+        
+        int getSwitchNum ();
+        int getPrev ();
+        int getNext ();
+        int getIPLow ();
+        int getIPHigh ();
+
+        void setPfd ( int i, int rfd );
 
 };
 

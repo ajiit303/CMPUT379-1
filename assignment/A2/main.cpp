@@ -18,7 +18,8 @@ int main ( int argc, char *args[] ) {
 
         if ( numSwitch > 0 && numSwitch <= MAX_NSW ) {
             MasterSwitch masterSwitch = MasterSwitch(numSwitch);
-            masterSwitch.run();
+            masterSwitch.initFIFO();
+            masterSwitch.startPoll();
         }
     } else if ( argc == 6 ) {
 
@@ -38,7 +39,8 @@ int main ( int argc, char *args[] ) {
         PacketSwitch packetSwitch = PacketSwitch( switchNum, prev, next, 
         ipLow, ipHigh, filename );
 
-        packetSwitch.run();
+        packetSwitch.initFIFO();
+        packetSwitch.startPoll();
     }
 
     return 0;
