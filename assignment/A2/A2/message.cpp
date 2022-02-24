@@ -6,6 +6,7 @@
 
 #include "handler.h"
 #include "message.h"
+#include "utils.h"
 
 using namespace std;
 
@@ -77,31 +78,34 @@ Packet composeHELLO_ACK () {
 void printFrame ( const char *prefix, Frame *frame ) {
     Packet pk = frame->packet;
 
-    printf( "%s [%s]", prefix, PacketTypeName[frame->packetType] );
+    printf( "%s [%s]:", prefix, PacketTypeName[frame->packetType] );
 
     switch(frame->packetType) {
         case ADD:
-            printf( " [ADD]:\n(srcIP = %d-%d, destIP = %d-%d, action = %s:%d, pkCount = %d\n",
+            printf( " \n(srcIP = %d-%d, destIP = %d-%d, action = %s:%d, pkCount = %d)\n\n",
             pk.addPacket.srcIP_lo, pk.addPacket.srcIP_hi,
             pk.addPacket.destIP_lo, pk.addPacket.destIP_hi,
             actionNames[pk.addPacket.actionType], pk.addPacket.actionVal, 
             pk.addPacket.pkCount );
             break;
         case ASK:
-            printf( " [ASK]:  header = (srcIP = %d, destIP = %d\n", 
+            printf( "  header = (srcIP = %d, destIP = %d)\n\n", 
             pk.askPacket.srcIP, pk.askPacket.destIP );
             break;
         case HELLO:
-            printf( "[HELLO]:\n(port0 = master, port1 = %d, port2 = %d, port3 = %d-%d)\n",
+            printf( " \n(port0 = master, port1 = %d, port2 = %d, port3 = %d-%d)\n\n",
              pk.helloPacket.prev, pk.helloPacket.next,
              pk.helloPacket.srcIP_lo, pk.helloPacket.srcIP_hi );
              break;
         case HELLO_ACK:
-            printf( " [HELLO_ACK]\n" );
+            printf( "\n\n" );
             break;
         case RELAY:
-            printf( " [RELAY]:  header = (srcIP = %d, destIP = %d)\n",
+            printf( "  header = (srcIP = %d, destIP = %d)\n\n",
             pk.replayPacket.srcIP, pk.replayPacket.destIP );
+            break;
+        case UNKNOWN:
+            printf(" \nUnknown packet");
             break;
     }
 }

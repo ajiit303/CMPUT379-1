@@ -11,17 +11,18 @@ class Rule {
     public:
         Rule (int srcIP_lo, int srcIP_hi, int destIP_lo, int destIP_hi, 
         int actionType, int actionVal );
+        
+        friend ostream& operator<< ( ostream& out, const Rule& r );
+        
+        void addPkCount ();
 
     private:
         int srcIP_lo, srcIP_hi;
         int destIP_lo, destIP_hi;
         int actionType, actionVal;
-        int pktCount = 0;
+        int pkCount = 0;
 
 };
-
-ostream& operator<< ( ostream& outs, const Rule& obj );
-
 
 
 #endif

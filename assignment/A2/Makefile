@@ -5,7 +5,7 @@ scpDir=		chengxua@ug05.cs.ualberta.ca:~/379
 
 
 starter:  handler.cpp main.cpp master.cpp message.cpp rule.cpp tor.cpp utils.cpp const.h handler.h master.h message.h rule.h tor.h utils.h
-	g++ -Wall handler.cpp main.cpp master.cpp rule.cpp tor.cpp utils.cpp -o a2w22
+	g++ -Wall handler.cpp main.cpp master.cpp message.cpp rule.cpp tor.cpp utils.cpp -o a2w22
 
 tar:
 	touch $(target).tar.gz

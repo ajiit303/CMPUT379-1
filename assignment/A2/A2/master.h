@@ -26,15 +26,18 @@ class MasterSwitch {
         
         void startPoll ();
 
-        void sendHELLO_ACK ( int switchNum, int fd );
         
-        void addSwitchInfo (HELLOPacket pk);
+        void sendADD ( int switchNum, int dest, int wfd );
+        void sendHELLO_ACK ( int switchNum, int wfd );
+        
+        void addSwitchInfo (HELLOPacket helloPk);
+        Packet generateRule ( int switchNum, int destIP );
 
     private:
         int numSwitch;
 
-        int helloCount, askCount;
-        int hello_ackCount, addCount;
+        int helloCount = 0, askCount = 0;
+        int hello_ackCount = 0, addCount = 0;
 
         // 0 -> stdin, stdout
         // 1 ~ MAXNSW all packets switch

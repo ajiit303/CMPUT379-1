@@ -12,7 +12,6 @@ using namespace std;
 
 
 int main ( int argc, char *args[] ) {
-
     if ( argc == 3 ) {
         int numSwitch = atoi(args[2]);
 

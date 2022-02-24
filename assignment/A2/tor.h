@@ -17,7 +17,7 @@ class PacketSwitch {
         PacketSwitch ( int switchNum, int prev, int next, int ipLow, int ipHigh,
         string filename );
         void initFIFO();
-        void printFtable();
+        void info();
         void startPoll();
         void sendHELLO();
 
@@ -25,8 +25,16 @@ class PacketSwitch {
         int switchNum;
         int prev, next;
         int ipLow, ipHigh;
+
         string filename;
         
+        int admitCount = 0, hello_ackCount = 0, addCount = 0, relayinCount = 0;
+        int helloCount = 0, askCount = 0, relayoutCount = 0;
+
+        // 0 -> stdin, stdout
+        // 1 -> port 0, master
+        // 2 -> port 1, prev
+        // 3 -> port 2, next
         int fifos[MAXPKFD][2];
         struct pollfd pfds[MAXPKFD];
 

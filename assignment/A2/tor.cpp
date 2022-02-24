@@ -79,10 +79,25 @@ void PacketSwitch::initFIFO () {
     }
 }
 
-void PacketSwitch::printFtable () {
+void PacketSwitch::info() {
+    cout << "Forwarding table" << endl;
+
+    int count = 0;
+
     for ( auto it = ftable.begin(); it != ftable.end(); it++ ) {
-        
+        cout << "[" << to_string(count) << "]" << *it;
     }
+
+    cout << "Packet Stats:" << endl;
+
+    cout << "\tReceived " << "ADMIT:" << to_string(admitCount) << 
+    ", HELLO_ACK:" << to_string(hello_ackCount) << 
+    ", ADD:" << to_string(addCount) << 
+    ", RELAYIN:" << to_string(relayinCount) << endl;
+
+    cout << "\tTransmitted: " << "HELLO:" << to_string(helloCount) << 
+    ", ASK:" << to_string(askCount) << 
+    ", RELAYOUT:" << to_string(relayoutCount);
 }
 
 void PacketSwitch::setPfd ( int i, int rfd ) {
@@ -107,11 +122,37 @@ void PacketSwitch::startPoll () {
         rval = poll( pfds, MAXPKFD, 0 );
         for ( in = 0; in < MAXPKFD; in++ ) {
             if ( pfds[in].revents && POLLIN ) {
-                len = read( fifos[in][0], buf, MAXBUF );
                 
                 if ( in == 0 ) {
+                    len = read( fifos[in][0], buf, MAXBUF );
+                    
                     if ( strcpy( buf, "info" ) == 0 )
-                        
+                        info();
+                    else if ( strcpy( buf, "exit" ) == 0 ) {
+                        info();
+                        return;
+                    } else 
+                        warning( "a2w22: %s: command not found\n", buf );
+                    
+                    break;
+                }
+
+                Frame frame = rcvFrame(fifos[in][0]);
+                PacketType packeType = frame.packetType;
+
+                string prefix = "Received (src = " + 
+                ( in == 1 ) ? "master" : "psw" + to_string(in) + 
+                ", dest = psw" + to_string(switchNum);
+
+                printFrame( prefix.c_str(), &frame ); 
+
+                switch(packeType) {
+                    case ADD:
+                        break;
+                    case HELLO_ACK:
+                        break;
+                    case RELAY:
+                        break;
                 }
             }
         }
@@ -120,13 +161,11 @@ void PacketSwitch::startPoll () {
 
 void PacketSwitch::sendHELLO () {
     Packet helloPk = composeHELLO( switchNum, prev, next, ipLow, ipHigh );
-    sendFrame( fifos[1][1], HELLO, &helloPk );
 
-    string header = 
+    string prefix = 
         "Transmitted (src = psw" + to_string(switchNum) + "dest= master) [HELLO]: ";
     
-    string pkContent = 
-        "(port0 = master, port1 = " + ( ( prev == -1 ) ? "null" : to_string(prev) ) +
-        ",port2 = " + ( ( next == -1 ) ? "null" : to_string(next) )+ 
-        ",port3 = " + to_string(ipLow) + "-" + to_string(ipHigh);
+    sendFrame( prefix.c_str(), fifos[1][1], HELLO, &helloPk );
+
+    helloCount++;
 }

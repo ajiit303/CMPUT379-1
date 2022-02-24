@@ -11,9 +11,9 @@ using namespace std;
 Rule::Rule ( int srcIP_lo, int srcIP_hi, int destIP_lo, int destIP_hi, 
     int actionType, int actionVal ) {
     
-    assert( srcIP_lo < srcIP_hi && srcIP_lo >= 0 );
+    assert( srcIP_lo <= srcIP_hi && srcIP_lo >= 0 );
     assert( srcIP_hi <= MAXIP );
-    assert( destIP_lo < destIP_hi && destIP_lo >= 0 );
+    assert( destIP_lo <= destIP_hi && destIP_lo >= 0 );
     assert( destIP_hi <= MAXIP );
 
     this->srcIP_lo = srcIP_lo;
@@ -24,8 +24,12 @@ Rule::Rule ( int srcIP_lo, int srcIP_hi, int destIP_lo, int destIP_hi,
     this->actionVal = actionVal;
 }
 
-void Rule::addPkCount () {
-    pkCount += 1;
+bool Rule::isMatch ( int srcIP, int destIP ) {
+    return ( srcIP >= srcIP_lo ) && ( srcIP <= srcIP_hi ) && ( destIP >= destIP_lo ) && ( destIP <= destIP_hi ) ;
+}
+
+bool Rule::isReach (int destIP) {
+    return actionVal == 3 && destIP >= destIP_lo && destIP <= destIP_hi;
 }
 
 ostream& operator<< ( ostream& out, const Rule& r ) {
@@ -33,7 +37,7 @@ ostream& operator<< ( ostream& out, const Rule& r ) {
         "(srcIP = " + to_string(r.srcIP_lo) + "-" + to_string(r.srcIP_hi) + 
         ", destIP = " + to_string(r.destIP_lo) + "-" + to_string(r.destIP_hi) +
         ", action = " + actionNames[r.actionType] + ":" + to_string(r.actionVal) + 
-        ", pkCount = " + to_string(r.pkCount);
+        ", pkCount = " + to_string(r.pkCount) + ")";
     
     out << line << endl;
 
