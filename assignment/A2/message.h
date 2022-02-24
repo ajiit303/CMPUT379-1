@@ -16,9 +16,9 @@ using namespace std;
  * RELAY a switch forward a received packet header to a neighbour 
  */
 
-typedef enum { ADD, ASK, HELLO, HELLO_ACK, RELAY } PacketType;
+typedef enum { UNKNOWN, ADD, ASK, HELLO, HELLO_ACK, RELAY } PacketType;
 
-const char PacketTypeName[][16] = { "ADD", "ASK", "HELLO", "HELLO_ACK", "RELAY" };
+const char PacketTypeName[][16] = { "UNKNOWN", "ADD", "ASK", "HELLO", "HELLO_ACK", "RELAY",  };
 
 typedef struct { int srcIP_lo; int srcIP_hi;
     int destIP_lo; int destIP_hi;

@@ -3,6 +3,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -15,7 +16,7 @@
 using namespace std;
 
 
-int getSwitchNum (string str) {
+int stoSwNum (string str) {
     if ( str.compare("null") == 0 )
         return -1;
 
@@ -67,18 +68,61 @@ void mkopenw ( int s1, int s2, int &wfd ) {
     cout << name + " is open" << endl << endl;
 }
 
-int split ( string str, string del, string token[] ) {
+int split ( string str, string del, vector<string> &tokens ) {
     int num = 0;
     int start = 0;
     int end = str.find(del);
 
     while (end != -1) {
-        token[num++] = str.substr( start, end - start );
+        tokens.push_back( str.substr( start, end - start ) );
         start = end + del.size();
         end = str.find( del, start );
     }
 
-    token[num++] = str.substr( start, end - start );
+    tokens.push_back( str.substr( start, end - start ) );
 
     return num;
 }
+
+// ssize_t readn ( int fd, void *ptr, size_t n ) {
+//     size_t nleft;
+//     ssize_t nread;
+
+//     nleft = n;
+//     while ( nleft > 0 ) {
+//         if ( ( nread = read( fd, ptr, nleft ) ) < 0 ) {
+//             if ( nleft == n )
+//                 return -1;
+//             else
+//                 break;
+//         } else if ( nread == 0 ) {
+//             break;
+//         }
+//         nleft -= nread;
+//         ptr += nread;
+//     }
+
+//     return ( n- nleft );
+// }
+
+// ssize_t writen ( int fd, const void *ptr, size_t n ) {
+//     size_t nleft;
+//     ssize_t nwritten;
+
+//     nleft = n;
+//     while ( nleft > 0 ) {
+//         if ( ( nwritten = write( fd, ptr, nleft ) < 0 ) ) {
+//             if ( nleft == n )
+//                 return -1;
+//             else
+//                 break;
+//         } else if ( nwritten == 0 ) {
+//             break;
+//         }
+
+//         nleft -= nwritten;
+//         ptr += nwritten;
+//     }
+
+//     return ( n - nleft );
+// }

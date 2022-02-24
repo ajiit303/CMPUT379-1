@@ -1,14 +1,20 @@
 #include <cstring>
 #include <iostream>
 #include <string>
+#include <vector>
+
+#include <pthread.h>
 #include <unistd.h>
 
 #include "const.h"
+#include "handler.h"
 #include "master.h"
 #include "tor.h"
 #include "utils.h"
 
 using namespace std;
+
+typedef void * (*THREADFUNCPTR) (void *);
 
 
 int main ( int argc, char *args[] ) {
@@ -22,24 +28,52 @@ int main ( int argc, char *args[] ) {
         }
     } else if ( argc == 6 ) {
 
-        int switchNum = getSwitchNum( string(args[1]) );
-        int prev = getSwitchNum( string(args[3]) );
-        int next = getSwitchNum( string(args[4]) );
+        int switchNum = stoSwNum( string(args[1]) );
+        int prev = stoSwNum( string(args[3]) );
+        int next = stoSwNum( string(args[4]) );
 
-        string ipRange[2];
+        vector<string> ipRange;
 
         split( string(args[5]), "-", ipRange );
 
-        int ipLow = stoi(ipRange[0]);
-        int ipHigh = stoi(ipRange[1]);
+        int ipLow = stoi(ipRange.front());
+        int ipHigh = stoi(ipRange.back());
 
         string filename = string(args[2]);
 
-        PacketSwitch packetSwitch = PacketSwitch( switchNum, prev, next, 
-        ipLow, ipHigh, filename );
+        PacketSwitch * packetSwitch = new 
+            PacketSwitch( switchNum, prev, next, ipLow, ipHigh, filename );
 
-        packetSwitch.initFIFO();
-        packetSwitch.startPoll();
+        packetSwitch->initFIFO();
+
+        int rval;
+        pthread_t fileThreadId, pollThreadId;
+
+        rval = pthread_create( &fileThreadId, NULL, (THREADFUNCPTR)&PacketSwitch::readFile, packetSwitch );
+
+        if (rval) {
+            fatal( "pthread_create() error" );
+            exit(1);
+        }
+
+        rval = pthread_create( &pollThreadId, NULL, (THREADFUNCPTR)&PacketSwitch::startPoll, packetSwitch );
+
+        if (rval) {
+            fatal( "pthread_create() error" );
+            exit(1);
+        }
+
+        rval = pthread_join( fileThreadId, NULL );
+        if (rval) {
+            fatal( "pthread_join() error %d", rval );  
+        }
+
+        rval = pthread_join( pollThreadId, NULL );
+        if (rval) {
+            fatal( "pthread_join() error %d", rval );  
+        }
+
+        delete packetSwitch;
     }
 
     return 0;

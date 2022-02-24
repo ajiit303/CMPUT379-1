@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <cstring>
+#include <cstdio>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -31,26 +32,13 @@ PacketSwitch::PacketSwitch ( int switchNum, int prev, int next, int ipLow, int i
     this->filename = filename;
 
     this->ftable.push_back( Rule(0, MAXIP, this->ipLow, this->ipHigh, FORWARD, 3) );
+
+    memset( &fifos, 0, sizeof(fifos) );
+    memset( &pfds, 0, sizeof(pfds) );
 }
 
-int PacketSwitch::getSwitchNum () {
-    return switchNum;
-}
+PacketSwitch::~PacketSwitch() {
 
-int PacketSwitch::getPrev () {
-    return prev;
-}
-
-int PacketSwitch::getNext () {
-    return next;
-}
-
-int PacketSwitch::getIPLow () {
-    return ipLow;
-}
-
-int PacketSwitch::getIPHigh () {
-    return ipHigh;
 }
 
 void PacketSwitch::initFIFO () {
@@ -69,18 +57,22 @@ void PacketSwitch::initFIFO () {
     if ( prev != -1 ) {
         mkopen( prev, switchNum, fifos[2][0], fifos[2][1] );
         setPfd( count, fifos[2][0] );
-        count++;
-    }
+    } count++;
 
     if ( next != -1 ) {
         mkopen( next, switchNum, fifos[3][0], fifos[3][1] );
         setPfd( count, fifos[3][0] );
-        count++;
-    }
+    } count++;
+}
+
+void PacketSwitch::setPfd ( int i, int rfd ) {
+    pfds[i].fd = rfd;
+    pfds[i].events = POLLIN;
+    pfds[i].revents = 0;
 }
 
 void PacketSwitch::info() {
-    cout << "Forwarding table" << endl;
+    cout << endl << "Forwarding table" << endl;
 
     int count = 0;
 
@@ -97,75 +89,256 @@ void PacketSwitch::info() {
 
     cout << "\tTransmitted: " << "HELLO:" << to_string(helloCount) << 
     ", ASK:" << to_string(askCount) << 
-    ", RELAYOUT:" << to_string(relayoutCount);
+    ", RELAYOUT:" << to_string(relayoutCount) << endl << endl;
 }
 
-void PacketSwitch::setPfd ( int i, int rfd ) {
-    pfds[i].fd = rfd;
-    pfds[i].events = POLLIN;
-    pfds[i].revents = 0;
+void * PacketSwitch::readFile () {
+    string sline = "";
+    
+    char line[1024];
+    vector<string> tokens;
+    
+    memset( &line, 0, sizeof(line) );
+
+    FILE *f = fopen( filename.c_str(), "r");
+    assert ( f != nullptr );
+
+    while ( hello_ackCount == 0 ) { sleep(3); }
+
+    while ( fgets( line, 1024, f ) ) {
+        if ( strlen(line) == 0 || line[0] == '#' || line[0] == '\n' || line[0] == ' ' ) {
+            sline = "";
+            tokens.clear();
+            memset( &line, 0, sizeof(line) );
+            continue;
+        }
+
+        sline = string(line);
+        sline = sline.substr( 0, sline.find("\n") );
+        split( sline, " ", tokens );
+
+        processLine(tokens);
+
+        sline = "";
+        tokens.clear();
+        memset( &line, 0, sizeof(line) );
+    }
+
+    return NULL;
 }
 
-void PacketSwitch::startPoll () {
+void PacketSwitch::processLine ( vector<string> &tokens ) {
+    int swNum = stoSwNum( tokens.front() );
+    if ( swNum != switchNum ) return;
+
+    if ( tokens.at(1) == "delay" ) {
+        int usec = stoi( tokens.back() );
+        delay(usec);
+        return;
+    }
+    
+    int srcIP = stoi( tokens.at(1) );
+    int destIP = stoi( tokens.back() );
+
+    forwarding( srcIP, destIP, 0 );
+}
+
+void * PacketSwitch::startPoll () {
     int in = 0;
-    int rval = 0;
     int len = 0;
+    int rval = 0;
 
     char buf[MAXBUF];
-    memset( buf, 0, sizeof(buf) );
+    string prefix;
 
-    cout << "start polling" << endl;
+    Frame frame;
+    PacketType packetType;
+
+    cout << "start polling" << endl << endl;
 
     sendHELLO();
 
     while (1) {
         rval = poll( pfds, MAXPKFD, 0 );
+        len = 0;
+        prefix = "";
+
+        memset( &buf, 0, sizeof(buf) );
+        memset( &frame, 0, sizeof(frame) );
+        packetType = UNKNOWN;
+
+        checkPendingPacket();
+
         for ( in = 0; in < MAXPKFD; in++ ) {
-            if ( pfds[in].revents && POLLIN ) {
-                
+            if ( pfds[in].revents & POLLIN ) {
                 if ( in == 0 ) {
                     len = read( fifos[in][0], buf, MAXBUF );
                     
-                    if ( strcpy( buf, "info" ) == 0 )
+                    if ( strcmp( buf, "info\n" ) == 0 )
                         info();
-                    else if ( strcpy( buf, "exit" ) == 0 ) {
+                    else if ( strcmp( buf, "exit\n" ) == 0 ) {
                         info();
-                        return;
+                        exit(0);
                     } else 
                         warning( "a2w22: %s: command not found\n", buf );
-                    
-                    break;
-                }
+                } else {
 
-                Frame frame = rcvFrame(fifos[in][0]);
-                PacketType packeType = frame.packetType;
+                frame = rcvFrame(fifos[in][0]);
+                packetType = frame.packetType;
 
-                string prefix = "Received (src = " + 
-                ( in == 1 ) ? "master" : "psw" + to_string(in) + 
-                ", dest = psw" + to_string(switchNum);
 
+                prefix = makePrefix( in - 1, switchNum,0 );
                 printFrame( prefix.c_str(), &frame ); 
 
-                switch(packeType) {
+                switch(packetType) {
                     case ADD:
+                        rcvADD(frame.packet.addPacket);
                         break;
                     case HELLO_ACK:
+                        hello_ackCount++;
                         break;
                     case RELAY:
+                        rcvRELAY(frame.packet.replayPacket);
                         break;
+                    default:
+                        break;
+                    }
                 }
             }
         }
     }
 }
 
+string PacketSwitch::makePrefix ( int src, int dest, int option ) {
+    string strSrc = ( src == 0 ) ? "master" : ( "psw" + to_string(src) );
+    string strDest = ( dest == 0 ) ? "master" : ( "psw" + to_string(dest) );
+    string strOption = option ? "Transmitted" : "Received";
+    string prefix = strOption + " (src = " + strSrc + ", dest = " + strDest + ")";
+
+    return prefix;
+}
+
+void PacketSwitch::addRule (ADDPacket addPk) {
+    Rule newRule = Rule( addPk.srcIP_lo, addPk.srcIP_hi, 
+                            addPk.destIP_lo, addPk.destIP_hi, 
+                            addPk.actionType, addPk.actionVal );
+    
+    for ( auto it = ftable.begin(); it != ftable.end(); it++ ) {
+        if ( it->isEqual(newRule) )
+            return;
+    }
+
+    ftable.push_back(newRule);
+}
+
+void PacketSwitch::checkPendingPacket () {
+    if ( !pending.empty() ) {
+        auto it = pending.begin();
+            
+        while (it != pending.end()) {
+            if ( forwardPacket( it->srcIP, it->destIP, 0 ) )
+                it = pending.erase(it);
+            else 
+                it++;
+        }
+    }
+}
+
+void PacketSwitch::delay (int usec) {
+    cout << "** Entering a delay period of " << to_string(usec) << " mesc" << endl << endl;
+
+    usleep(usec);
+
+    cout << "** Delay period ended" << endl << endl;
+
+    return;
+}
+
+void PacketSwitch::forwarding ( int srcIP, int destIP, int relayIn ) {
+    int forwarded = forwardPacket( srcIP, destIP, relayIn );
+
+    if (forwarded) return;
+    
+    sendASK ( srcIP, destIP );
+}
+
+int PacketSwitch::forwardPacket ( int srcIP, int destIP, int relayIn ) {
+
+    for ( auto it = ftable.begin(); it != ftable.end(); it++ ) {
+        if ( it->isMatch(srcIP, destIP) ) {
+            
+            if ( it->actionType != DROP && !it->isReach(destIP) )
+                sendRELAY( it->actionVal, srcIP, destIP );
+            
+            if ( !relayIn ) {
+                it->pkCount++;
+                admitCount++;
+            }
+            
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+void PacketSwitch::sendASK ( int srcIP, int destIP ) {
+    PendingPacket pendingPacket = { srcIP, destIP };
+    pending.push_back(pendingPacket);
+
+    for ( auto it = askHistory.begin(); it != askHistory.end(); it++ ) {
+        if ( srcIP == it->srcIP && destIP == it->destIP )
+            return;
+    }
+
+    Packet askPk = composeASK( srcIP, destIP );
+
+    string prefix = makePrefix( switchNum, 0, 1 );
+
+    sendFrame( prefix.c_str(), fifos[1][1], ASK, &askPk );
+    askHistory.push_back(pendingPacket);
+
+    askCount++;
+}
+
 void PacketSwitch::sendHELLO () {
     Packet helloPk = composeHELLO( switchNum, prev, next, ipLow, ipHigh );
 
-    string prefix = 
-        "Transmitted (src = psw" + to_string(switchNum) + "dest= master) [HELLO]: ";
-    
+    string prefix = makePrefix( switchNum, 0, 1 );
+
     sendFrame( prefix.c_str(), fifos[1][1], HELLO, &helloPk );
 
     helloCount++;
+}
+
+void PacketSwitch::sendRELAY ( int actionVal, int srcIP, int destIP ) {
+    Packet relayPk;
+    memset( &relayPk, 0, sizeof(relayPk) );
+
+    relayPk = composeRELAY( srcIP, destIP );
+
+    switch(actionVal) {
+        case 1: { // port 1
+            string prefix = makePrefix( switchNum, prev, 1 );
+            sendFrame( prefix.c_str(), fifos[2][1], RELAY, &relayPk );
+            break;
+        }               
+        case 2: { // port 2
+            string prefix = makePrefix( switchNum, next, 1 );
+            sendFrame( prefix.c_str(), fifos[3][1], RELAY, &relayPk );
+            break;
+        }
+    }
+
+    relayoutCount++;
+}
+
+void PacketSwitch::rcvADD (ADDPacket addPk) {
+    addRule(addPk);
+    addCount++;
+}
+
+void PacketSwitch::rcvRELAY (RELAYPacket relayPk) {
+    forwarding( relayPk.srcIP, relayPk.destIP, 1 );
+    relayinCount++;
 }
