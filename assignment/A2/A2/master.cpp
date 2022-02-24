@@ -87,11 +87,11 @@ Packet MasterSwitch::generateRule ( int switchNum, int destIP ) {
             int actionVal;
 
             if ( switchNum == it->swNum )
-                actionVal = 3;
+                actionVal = 3; // port 3
             else if ( switchNum > it->swNum )
-                actionVal = 2;
+                actionVal = 1; // port 2
             else
-                actionVal = 1;
+                actionVal = 2; // port 1
 
             rule = composeADD( 0, MAXIP, it->ipLow, it->ipHigh, FORWARD, actionVal, 0 );
             return rule;

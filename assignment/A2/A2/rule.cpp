@@ -24,6 +24,15 @@ Rule::Rule ( int srcIP_lo, int srcIP_hi, int destIP_lo, int destIP_hi,
     this->actionVal = actionVal;
 }
 
+bool Rule::isEqual ( const Rule& r ) {
+    return srcIP_lo == r.srcIP_lo && 
+           srcIP_hi == r.srcIP_hi && 
+           destIP_lo == r.destIP_lo && 
+           destIP_hi == r.destIP_hi && 
+           actionType == r.actionType && 
+           actionVal == r.actionVal;
+}
+
 bool Rule::isMatch ( int srcIP, int destIP ) {
     return ( srcIP >= srcIP_lo ) && ( srcIP <= srcIP_hi ) && ( destIP >= destIP_lo ) && ( destIP <= destIP_hi ) ;
 }

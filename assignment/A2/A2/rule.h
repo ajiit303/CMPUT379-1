@@ -18,9 +18,10 @@ class Rule {
         int actionType, int actionVal );
         
         friend ostream& operator<< ( ostream& out, const Rule& r );
-        
+
         bool isMatch( int srcIP, int destIP );
         bool isReach( int destIP );
+        bool isEqual( const Rule& r );
 };
 
 

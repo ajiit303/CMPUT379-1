@@ -20,7 +20,7 @@ Frame rcvFrame (int fd) {
 
     len = read( fd, (char *)&frame, sizeof(frame) );
     if ( len != sizeof(frame) )
-        warning( "Received fram has length = %d (expected = %d)\n", len, sizeof(frame) );
+        warning( "Received from has length = %d (expected = %d), fd: %d \n", len, sizeof(frame), fd );
     
     return frame;
 }
@@ -71,6 +71,17 @@ Packet composeHELLO_ACK () {
     Packet pk;
 
     memset( (char *)&pk, 0, sizeof(pk) );
+
+    return pk;
+}
+
+Packet composeRELAY ( int srcIP, int destIP ) {
+    Packet pk;
+
+    memset( (char *)&pk, 0, sizeof(pk) );
+
+    pk.replayPacket.srcIP = srcIP;
+    pk.replayPacket.destIP = destIP;
 
     return pk;
 }

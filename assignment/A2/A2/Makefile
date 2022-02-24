@@ -13,6 +13,20 @@ tar:
 	tar -cvf $(target).tar $(allFiles)
 	gzip $(target).tar
 
+s1:
+	./a2w22 psw1 file3.dat null psw2 100-110
+
+s2:
+	./a2w22 psw2 file3.dat psw1 null 200-210
+
+master:
+	./a2w22 master 2
+
+group:
+	./a2w22 master 2
+	./a2w22 psw1 file3.dat null psw2 100-110
+	./a2w22 psw2 file3.dat psw1 null 200-210
+
 scp:
 	scp $(target).tar.gz $(scpDir)
 

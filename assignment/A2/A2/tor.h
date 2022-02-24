@@ -2,6 +2,7 @@
 #define TOR_H
 
 
+#include <queue>
 #include <string>
 #include <vector>
 
@@ -11,6 +12,12 @@
 #include "rule.h"
 
 using namespace std;
+
+
+typedef struct {
+    int srcIP;
+    int destIP;
+} PendingPacket;
 
 
 class PacketSwitch {
@@ -36,16 +43,19 @@ class PacketSwitch {
         void processLine ( vector<string> &tokens );
         
         void addRule (ADDPacket addPk);
-        int forwardPacket ( int srcIP, int destIP );
+        void delay (int usec);
+        void forwarding ( int srcIP, int destIP, int relayIn );
+        int forwardPacket ( int srcIP, int destIP, int relayIn );
+        void checkPendingPacket ();
         void sendASK ( int srcIP, int destIP );
         void sendHELLO ();
-        void sendRelay ( int actionVal, int srcIP, int destIP );
+        void sendRELAY ( int actionVal, int srcIP, int destIP );
+        void rcvADD (ADDPacket addPk);
+        void rcvRELAY (RELAYPacket relayPk);
 
         ~PacketSwitch();
 
     private:
-        pthread_mutex_t ftableLock;
-
         // 0 -> stdin, stdout
         // 1 -> port 0, master
         // 2 -> port 1, prev
@@ -53,6 +63,8 @@ class PacketSwitch {
         int fifos[MAXPKFD][2];
         struct pollfd pfds[MAXPKFD];
 
+        vector<PendingPacket> pending;
+        vector<PendingPacket> askHistory;
         vector<Rule> ftable;
 
         void setPfd ( int i, int rfd );
