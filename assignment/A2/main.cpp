@@ -4,6 +4,7 @@
 #include <vector>
 
 #include <pthread.h>
+#include <signal.h>
 #include <unistd.h>
 
 #include "const.h"
@@ -14,17 +15,37 @@
 
 using namespace std;
 
-typedef void * (*THREADFUNCPTR) (void *);
 
+static int master = 0;
+
+struct sigaction oldAct, newAct;
+
+static MasterSwitch *masterSwitch;
+static PacketSwitch *packetSwitch;
+
+void infoHanlder ( int sigNo ) {
+    if (master) 
+        masterSwitch->info();
+    else
+        packetSwitch->info();
+}
 
 int main ( int argc, char *args[] ) {
+    newAct.sa_handler = &infoHanlder;
+    newAct.sa_flags |= SA_SIGINFO;
+
+    sigaction( SIGUSR1, &newAct, &oldAct );
+
     if ( argc == 3 ) {
         int numSwitch = atoi(args[2]);
 
         if ( numSwitch > 0 && numSwitch <= MAX_NSW ) {
-            MasterSwitch masterSwitch = MasterSwitch(numSwitch);
-            masterSwitch.initFIFO();
-            masterSwitch.startPoll();
+            master = 1;
+            masterSwitch = new MasterSwitch(numSwitch);
+            masterSwitch->initFIFO();
+            masterSwitch->startPoll();
+
+            delete masterSwitch;
         }
     } else if ( argc == 6 ) {
 
@@ -41,8 +62,8 @@ int main ( int argc, char *args[] ) {
 
         string filename = string(args[2]);
 
-        PacketSwitch * packetSwitch = new 
-            PacketSwitch( switchNum, prev, next, ipLow, ipHigh, filename );
+        packetSwitch = new PacketSwitch( switchNum, prev, next, ipLow, ipHigh, 
+            filename );
 
         packetSwitch->initFIFO();
 

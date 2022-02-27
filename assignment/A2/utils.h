@@ -11,6 +11,8 @@
 using namespace std;
 
 
+typedef void * (*THREADFUNCPTR) (void *);
+
 int stoSwNum (string str);
 
 void mkopen ( int s1, int s2, int &rfd, int &wfd );
