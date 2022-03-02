@@ -6,15 +6,9 @@
 using namespace std;
 
 
-/**
- * HELLO switch number, number of its neighbouring switches, ranger of IP
- * HELLO_ACK Reply of HELLO (no message)
- * 
- * ASK not find a matching rule in table, sends an SK packet to the master switch
- * ADD master switch replies with a rule stored in a packet of type ADD
- * 
- * RELAY a switch forward a received packet header to a neighbour 
- */
+// The implementation of packet is identical in most of the aspect 
+// to the one in lab experiment.
+
 
 typedef enum { UNKNOWN, ADD, ASK, HELLO, HELLO_ACK, RELAY } PacketType;
 

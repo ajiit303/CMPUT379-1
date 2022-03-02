@@ -127,6 +127,11 @@ void * PacketSwitch::readFile () {
     return NULL;
 }
 
+/**
+ * @brief Process each individual line in ".dat" file.
+ * 
+ * @param tokens 
+ */
 void PacketSwitch::processLine ( vector<string> &tokens ) {
     int swNum = stoSwNum( tokens.front() );
     if ( swNum != switchNum ) return;
@@ -254,6 +259,14 @@ void PacketSwitch::delay (int usec) {
     return;
 }
 
+/**
+ * @brief forwarding method include additional step. This step is to send an ASK 
+ * packet if a rule isn't in the forwarding table.
+ * 
+ * @param srcIP 
+ * @param destIP 
+ * @param relayIn 
+ */
 void PacketSwitch::forwarding ( int srcIP, int destIP, int relayIn ) {
     int forwarded = forwardPacket( srcIP, destIP, relayIn );
 
@@ -262,6 +275,15 @@ void PacketSwitch::forwarding ( int srcIP, int destIP, int relayIn ) {
     sendASK ( srcIP, destIP );
 }
 
+/**
+ * @brief Forwarding a packet.
+ * 
+ * @param srcIP 
+ * @param destIP 
+ * @param relayIn 
+ * @return int Return 1 if forwarding successfully. 0 means there's no such a rule 
+ * that match the sending request
+ */
 int PacketSwitch::forwardPacket ( int srcIP, int destIP, int relayIn ) {
 
     for ( auto it = ftable.begin(); it != ftable.end(); it++ ) {

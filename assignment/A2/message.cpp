@@ -11,6 +11,10 @@
 using namespace std;
 
 
+// The implementation of packet is identical in most of the aspect 
+// to the one in lab experiment.
+
+
 Frame rcvFrame (int fd) {
     int len;
     Frame frame;
