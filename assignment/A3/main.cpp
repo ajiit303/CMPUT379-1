@@ -37,7 +37,10 @@ int main ( int argc, char *args[] ) {
         if ( numSwitch > 0 && numSwitch <= MAX_NSW ) {
             master = 1;
             masterSwitch = new MasterSwitch( numSwitch, portNumber );
-            masterSwitch->initSocket();
+            
+            masterSwitch->createSocket();
+            masterSwitch->bindSocket();
+            masterSwitch->masterListen();
             masterSwitch->startPoll();
 
             delete masterSwitch;
@@ -45,6 +48,7 @@ int main ( int argc, char *args[] ) {
     } else if ( argc == 8 ) {
 
         int switchNum = stoSwNum( string(args[1]) );
+        string filename = string(args[2]);
         int prev = stoSwNum( string(args[3]) );
         int next = stoSwNum( string(args[4]) );
 
@@ -55,7 +59,9 @@ int main ( int argc, char *args[] ) {
         int ipLow = stoi(ipRange.front());
         int ipHigh = stoi(ipRange.back());
 
-        string filename = string(args[2]);
+        int portNumber = atoi(args[7]);
+
+
 
         packetSwitch = new PacketSwitch( switchNum, prev, next, ipLow, ipHigh, 
             filename );

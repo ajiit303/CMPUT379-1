@@ -20,6 +20,10 @@
 #include "master.h"
 #include "message.h"
 
+#define STDININDEX 0
+#define MSWSFDINDEX 1
+
+
 using namespace std;
 
 
@@ -36,7 +40,10 @@ class MasterSwitch {
 
         void info ();
 
-        void initSocket();
+        void createSocket();
+        void bindSocket();
+        void masterListen();
+        void masterAccept();
         void startPoll ();
 
         void sendADD ( int switchNum, int dest, int wfd );
@@ -46,6 +53,8 @@ class MasterSwitch {
         Packet generateRule ( int switchNum, int destIP );
 
     private:
+        // number of accepted connection (packet switch), 2 = 0 accepted connection
+        int accpectedConn = 2;
         int numSwitch;
         int portNumber;
         int serverFd = -1;
@@ -54,8 +63,8 @@ class MasterSwitch {
         int hello_ackCount = 0, addCount = 0;
 
         // 0 -> stdin, stdout
-        // 1 ~ MAXNSW all packets switch
-        int fds[MAXMSFD];
+        // 1 -> server socket
+        // 2 ~ MAXMSFD -> packet switch connection
         struct pollfd pfds[MAXMSFD];
         
         vector<SwitchInfo> switchInfos;

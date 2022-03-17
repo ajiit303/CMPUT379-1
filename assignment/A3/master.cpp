@@ -7,14 +7,12 @@ MasterSwitch::MasterSwitch ( int numSwitch, int portNumber ) {
     this->numSwitch = numSwitch;
     this->portNumber = portNumber;
 
-    memset( &fds, 0, sizeof(fds) );
-    memset( &pfds, 0, sizeof(pfds) );
+    memset( pfds, 0, sizeof(pfds) );
 
-    fds[0] = STDIN_FILENO;
-    setPfd( 0, STDIN_FILENO );
+    setPfd( STDININDEX, STDIN_FILENO );
 }
 
-void MasterSwitch::initSocket() {
+void MasterSwitch::createSocket() {
     serverFd = socket( AF_INET, SOCK_STREAM, 0 );
     
     if ( serverFd < 0 ) {
@@ -22,8 +20,10 @@ void MasterSwitch::initSocket() {
         exit(1);
     }
 
-    cout << "socket is created" << endl;
+    cout << "master switch's socket is created" << endl;
+}
 
+void MasterSwitch::bindSocket() {
     struct sockaddr_in serverSockAddr;
 
     memset( (char *)&serverSockAddr, 0, sizeof(serverSockAddr) );
@@ -37,11 +37,107 @@ void MasterSwitch::initSocket() {
         exit(1);
     }
 
-    cout << "socket is binded" << endl;
+    cout << "master switch's socket is binded" << endl;
 
+    setPfd( MSWSFDINDEX, serverFd );
+}
+
+void MasterSwitch::masterListen() {
     listen( serverFd, MAX_NSW );
 
-    cout << "server is listening" << endl;
+    cout << "master switch starts listening" << endl;
+}
+
+void MasterSwitch::masterAccept() {
+    int pkSock = -1;
+    
+    struct sockaddr_in pkAddr;
+    socklen_t pkAddrLen;
+
+    pkAddrLen = sizeof(pkAddr);
+
+    pkSock = accept( pfds[MSWSFDINDEX].fd, (struct sockaddr *)&pkAddr, &pkAddrLen );
+    if ( pkSock < 0 )
+        cout << "accept() error " << pkSock << endl;
+    else {
+        setPfd( accpectedConn, pkSock );
+
+        accpectedConn++;
+
+        cout << "New connection accepted" << endl << endl;
+        cout << "Number of establish connection: " << accpectedConn - 2 << endl << endl;
+    }
+}
+
+void MasterSwitch::startPoll () {
+    int in = 0; // index 
+    int len = 0; // measure number of bytes read from socket
+    int rval = 0;
+
+    char buf[MAXBUF];
+    string prefix;
+
+    Frame frame;
+    PacketType packetType;
+
+    cout << "start polling" << endl << endl;
+
+    while (1) {
+        len = 0;
+
+        prefix = "";
+        memset( &buf, 0, sizeof(buf) );
+        memset( &frame, 0, sizeof(frame) );
+
+        packetType = UNKNOWN;
+
+        rval = poll( pfds, MAXMSFD, 0 );
+
+        if ( accpectedConn < MAX_NSW && ( pfds[MSWSFDINDEX].revents & POLLIN ) )
+            masterAccept();
+
+        for ( in = 0; in < MAXMSFD; in++ ) {
+            if ( pfds[in].revents & POLLIN ) {
+                
+                if ( in == 0 ) {
+                    len = read( pfds[in].fd, buf, MAXBUF );
+
+                    if ( strcmp( buf, "info\n" ) == 0 )
+                        info();
+                    else if ( strcmp( buf, "exit\n" ) == 0 ) {
+                        info();
+                        return;
+                    } else 
+                        warning( "a2w22: %s: command not found\n", buf );
+                    
+                    memset( &buf, 0, sizeof(buf) );
+
+                } else {
+                    
+                    frame = rcvFrame( pfds[in].fd );
+                    packetType = frame.packetType;
+                    
+                    prefix = "\nReceived (src = psw" + to_string(in) + ", dest = master)";
+                    
+                    printFrame( prefix.c_str(), &frame );
+
+                    switch(packetType) {
+                        case ASK:
+                            askCount++;
+                            sendADD( in, frame.packet.askPacket.destIP, pfds[in].fd );
+                            break;
+                        case HELLO:
+                            helloCount++;
+                            addSwitchInfo(frame.packet.helloPacket);
+                            sendHELLO_ACK( in, pfds[in].fd );
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+        }
+    }
 }
 
 void MasterSwitch::info () {
@@ -65,6 +161,12 @@ void MasterSwitch::info () {
     ", ADD:" << to_string(addCount) << endl << endl;
 }
 
+/**
+ * @brief 0 -> STDIN, 1 -> server socket file descriptor, 2 -> ... packet switch
+ * 
+ * @param i index of the file descriptor in the array
+ * @param rfd 
+ */
 void MasterSwitch::setPfd ( int i, int rfd ) {
     pfds[i].fd = rfd;
     pfds[i].events = POLLIN;
@@ -85,6 +187,8 @@ void MasterSwitch::addSwitchInfo (HELLOPacket pk) {
     auto pos = switchInfos.begin() + switchInfo.swNum - 1;
 
     switchInfos.insert( pos, switchInfo );
+
+    cout << "psw" << switchInfo.swNum << "is connected" << endl << endl;
 }
 
 Packet MasterSwitch::generateRule ( int switchNum, int destIP ) {
@@ -139,71 +243,4 @@ void MasterSwitch::sendHELLO_ACK ( int switchNum, int wfd ) {
     hello_ackCount++;
 }
 
-void MasterSwitch::startPoll () {
-    int acceptCount = 0; // number of accepted connection (packet switch)
-    int in = 0;
-    int len = 0;
-    int rval = 0;
 
-    char buf[MAXBUF];
-    string prefix;
-
-    Frame frame;
-    PacketType packetType;
-
-
-
-    cout << "start polling" << endl << endl;
-
-    while (1) {
-        rval = poll( pfds, MAXMSFD, 0 );
-        len = 0;
-        prefix = "";
-
-        memset( &buf, 0, sizeof(buf) );
-        memset( &frame, 0, sizeof(frame) );
-        packetType = UNKNOWN;
-
-        for ( in = 0; in < MAXMSFD; in++ ) {
-            if ( pfds[in].revents & POLLIN ) {
-                
-                if ( in == 0 ) {
-                    len = read( fds[in][0], buf, MAXBUF );
-
-                    if ( strcmp( buf, "info\n" ) == 0 )
-                        info();
-                    else if ( strcmp( buf, "exit\n" ) == 0 ) {
-                        info();
-                        return;
-                    } else 
-                        warning( "a2w22: %s: command not found\n", buf );
-                    
-                    memset( &buf, 0, sizeof(buf) );
-
-                } else {
-                    
-                    frame = rcvFrame( fds[in][0] );
-                    packetType = frame.packetType;
-                    
-                    prefix = "\nReceived (src = psw" + to_string(in) + ", dest = master)";
-                    
-                    printFrame( prefix.c_str(), &frame );
-
-                    switch(packetType) {
-                        case ASK:
-                            askCount++;
-                            sendADD( in, frame.packet.askPacket.destIP, fds[in][1] );
-                            break;
-                        case HELLO:
-                            helloCount++;
-                            addSwitchInfo(frame.packet.helloPacket);
-                            sendHELLO_ACK( in, fds[in][1] );
-                            break;
-                        default:
-                            break;
-                    }
-                }
-            }
-        }
-    }
-}

@@ -2,7 +2,7 @@
 
 
 PacketSwitch::PacketSwitch ( int switchNum, int prev, int next, int ipLow, int ipHigh,
-        string filename ) {
+        string filename, string serverAddr, int portNumber ) {
     assert( switchNum > 0 && switchNum <= MAX_NSW );
     assert( prev <= MAX_NSW && prev != 0 );
     assert( next <= MAX_NSW && next != 0 );
@@ -18,36 +18,34 @@ PacketSwitch::PacketSwitch ( int switchNum, int prev, int next, int ipLow, int i
 
     this->ftable.push_back( Rule(0, MAXIP, this->ipLow, this->ipHigh, FORWARD, 3) );
 
-    memset( &fifos, 0, sizeof(fifos) );
+    memset( &fds, 0, sizeof(fds) );
     memset( &pfds, 0, sizeof(pfds) );
+
+    fds[STD][READEND] = STDIN_FILENO;
+    fds[STD][WRITEEND] = STDOUT_FILENO;
+    setPfd( STD, fds[STD][READEND] );
 }
 
 PacketSwitch::~PacketSwitch() {
 
 }
 
-void PacketSwitch::initFIFO () {
-    int count = 0;
-
-    fifos[0][0] = STDIN_FILENO;
-    fifos[0][1] = STDOUT_FILENO;
-    setPfd( count, fifos[0][0] );
-    count++;
-
-    mkopen( 0, switchNum, fifos[1][0], fifos[1][1] );
-
-    setPfd( count, fifos[1][0] );
-    count++;
-
+void PacketSwitch::createFIFO () {
     if ( prev != -1 ) {
-        mkopen( prev, switchNum, fifos[2][0], fifos[2][1] );
-        setPfd( count, fifos[2][0] );
-    } count++;
+        mkopen( prev, switchNum, fds[PREV][READEND], fds[PREV][WRITEEND] );
+        setPfd( PREV, fds[PREV][READEND] );
+    }
 
     if ( next != -1 ) {
-        mkopen( next, switchNum, fifos[3][0], fifos[3][1] );
-        setPfd( count, fifos[3][0] );
-    } count++;
+        mkopen( next, switchNum, fds[NEXT][READEND], fds[NEXT][WRITEEND] );
+        setPfd( NEXT, fds[NEXT][READEND] );
+    }
+}
+
+void PacketSwitch::createSocket() {
+    int pkSfd;
+    struct sockaddr_in pkAddr;
+
 }
 
 void PacketSwitch::setPfd ( int i, int rfd ) {
@@ -162,7 +160,7 @@ void * PacketSwitch::startPoll () {
         for ( in = 0; in < MAXPKFD; in++ ) {
             if ( pfds[in].revents & POLLIN ) {
                 if ( in == 0 ) {
-                    len = read( fifos[in][0], buf, MAXBUF );
+                    len = read( pfds[in].fd, buf, MAXBUF );
                     
                     if ( strcmp( buf, "info\n" ) == 0 )
                         info();
@@ -173,7 +171,7 @@ void * PacketSwitch::startPoll () {
                         warning( "a2w22: %s: command not found\n", buf );
                 } else {
 
-                frame = rcvFrame(fifos[in][0]);
+                frame = rcvFrame(pfds[in].fd);
                 packetType = frame.packetType;
 
 
@@ -302,7 +300,7 @@ void PacketSwitch::sendASK ( int srcIP, int destIP ) {
 
     string prefix = makePrefix( switchNum, 0, 1 );
 
-    sendFrame( prefix.c_str(), fifos[1][1], ASK, &askPk );
+    sendFrame( prefix.c_str(), fds[MASTER][WRITEEND], ASK, &askPk );
     askHistory.push_back(pendingPacket);
 
     askCount++;
@@ -313,7 +311,7 @@ void PacketSwitch::sendHELLO () {
 
     string prefix = makePrefix( switchNum, 0, 1 );
 
-    sendFrame( prefix.c_str(), fifos[1][1], HELLO, &helloPk );
+    sendFrame( prefix.c_str(), fds[MASTER][WRITEEND], HELLO, &helloPk );
 
     helloCount++;
 }
@@ -327,12 +325,12 @@ void PacketSwitch::sendRELAY ( int actionVal, int srcIP, int destIP ) {
     switch(actionVal) {
         case 1: { // port 1
             string prefix = makePrefix( switchNum, prev, 1 );
-            sendFrame( prefix.c_str(), fifos[2][1], RELAY, &relayPk );
+            sendFrame( prefix.c_str(), fds[PREV][WRITEEND], RELAY, &relayPk );
             break;
         }               
         case 2: { // port 2
             string prefix = makePrefix( switchNum, next, 1 );
-            sendFrame( prefix.c_str(), fifos[3][1], RELAY, &relayPk );
+            sendFrame( prefix.c_str(), fds[NEXT][WRITEEND], RELAY, &relayPk );
             break;
         }
     }
