@@ -59,14 +59,14 @@ int main ( int argc, char *args[] ) {
         int ipLow = stoi(ipRange.front());
         int ipHigh = stoi(ipRange.back());
 
+        string serverName = string(args[6]);
         int portNumber = atoi(args[7]);
 
-
-
         packetSwitch = new PacketSwitch( switchNum, prev, next, ipLow, ipHigh, 
-            filename );
+            filename, serverName, portNumber );
 
-        packetSwitch->initFIFO();
+        packetSwitch->connectMaster();
+        packetSwitch->createFIFO();
 
         int rval;
         pthread_t fileThreadId, pollThreadId;
