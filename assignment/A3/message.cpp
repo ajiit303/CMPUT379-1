@@ -4,15 +4,14 @@
 #include "message.h"
 
 
-Frame rcvFrame (int fd) {
-    int len;
+Frame rcvFrame (int fd, int *len) {
     Frame frame;
 
     assert( fd >= 0 );
     memset( (char *)&frame, 0, sizeof(frame) );
 
-    len = read( fd, (char *)&frame, sizeof(frame) );
-    if ( len != sizeof(frame) )
+    *len = read( fd, (char *)&frame, sizeof(frame) );
+    if ( *len != sizeof(frame) )
         warning( "Received from has length = %d (expected = %d), fd: %d \n", len, sizeof(frame), fd );
     
     return frame;
@@ -42,6 +41,14 @@ Packet composeASK ( int srcIP, int destIP ) {
 
     pk.askPacket.srcIP = srcIP;
     pk.askPacket.destIP = destIP;
+
+    return pk;
+}
+
+Packet composeDISCONNECT () {
+    Packet pk;
+
+    memset( (char *)&pk, 0, sizeof(pk) );
 
     return pk;
 }

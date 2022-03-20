@@ -16,7 +16,7 @@ void MasterSwitch::createSocket() {
     serverFd = socket( AF_INET, SOCK_STREAM, 0 );
     
     if ( serverFd < 0 ) {
-        fatal( "sokcet() error\n" );
+        fatal( "socket() error\n" );
         exit(1);
     }
 
@@ -37,7 +37,7 @@ void MasterSwitch::bindSocket() {
         exit(1);
     }
 
-    cout << "master switch's socket is binded" << endl;
+    cout << "master switch's socket is binded." << endl;
 
     setPfd( MSWSFDINDEX, serverFd );
 }
@@ -70,7 +70,7 @@ void MasterSwitch::masterAccept() {
 }
 
 void MasterSwitch::startPoll () {
-    int in = 0; // index 
+    int in = 0; // index for looping polled file descriptors
     int len = 0; // measure number of bytes read from socket
     int rval = 0;
 
@@ -93,8 +93,10 @@ void MasterSwitch::startPoll () {
 
         rval = poll( pfds, MAXMSFD, 0 );
 
-        if ( accpectedConn < MAX_NSW && ( pfds[MSWSFDINDEX].revents & POLLIN ) )
+        if ( accpectedConn < MAX_NSW && ( pfds[MSWSFDINDEX].revents & POLLIN ) ) {
             masterAccept();
+            continue;
+        }
 
         for ( in = 0; in < MAXMSFD; in++ ) {
             if ( pfds[in].revents & POLLIN ) {
@@ -114,7 +116,9 @@ void MasterSwitch::startPoll () {
 
                 } else {
                     
-                    frame = rcvFrame( pfds[in].fd );
+                    frame = rcvFrame( pfds[in].fd, &len );                    
+
+                    
                     packetType = frame.packetType;
                     
                     prefix = "\nReceived (src = psw" + to_string(in) + ", dest = master)";
@@ -125,6 +129,8 @@ void MasterSwitch::startPoll () {
                         case ASK:
                             askCount++;
                             sendADD( in, frame.packet.askPacket.destIP, pfds[in].fd );
+                            break;
+                        case DISCONNECT:
                             break;
                         case HELLO:
                             helloCount++;

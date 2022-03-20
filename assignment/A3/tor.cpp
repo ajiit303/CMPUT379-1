@@ -2,7 +2,7 @@
 
 
 PacketSwitch::PacketSwitch ( int switchNum, int prev, int next, int ipLow, int ipHigh,
-        string filename, string serverAddr, int portNumber ) {
+        string filename, string serverName, int portNumber ) {
     assert( switchNum > 0 && switchNum <= MAX_NSW );
     assert( prev <= MAX_NSW && prev != 0 );
     assert( next <= MAX_NSW && next != 0 );
@@ -15,6 +15,8 @@ PacketSwitch::PacketSwitch ( int switchNum, int prev, int next, int ipLow, int i
     this->ipLow = ipLow;
     this->ipHigh = ipHigh;
     this->filename = filename;
+    this->serverName = serverName;
+    this->portNumber = portNumber;
 
     this->ftable.push_back( Rule(0, MAXIP, this->ipLow, this->ipHigh, FORWARD, 3) );
 
@@ -30,6 +32,46 @@ PacketSwitch::~PacketSwitch() {
 
 }
 
+void PacketSwitch::connectMaster() {
+    struct sockaddr_in server; 
+    struct hostent *host;
+
+    // Find host
+    host = gethostbyname( serverName.c_str() );
+    if ( host == (struct hostent *) NULL ) {
+        fatal( "failed gethostbyname(\"%s\")\n", serverName.c_str() );
+        exit(1);
+    }
+
+    cout << "Host name " << serverName << " is found" << endl;
+
+    memset( (char *)&server, 0, sizeof(server) );
+    
+    // Assign host's address to client socket
+    memcpy( (char *)&server.sin_addr, host->h_addr, host->h_length );
+    server.sin_family = AF_INET;
+    server.sin_port = htons(portNumber);
+
+    if ( ( pkFd = socket( AF_INET, SOCK_STREAM, 0 ) ) < 0 ) {
+        fatal( "Failed to create a socket\n", switchNum );
+        exit(1);
+    }
+
+    cout << "Packet switch's socket is created" << endl;
+
+    if ( connect( pkFd, (sockaddr *)&server, sizeof(server) ) < 0 ) {
+        fatal( "Failed to connect to master\n" );
+        exit(1);
+    }
+
+    cout << "Coonected to master" << endl;
+
+    // sokcet file descriptor accecpt both read and write
+    fds[MASTER][0] = pkFd;
+    fds[MASTER][1] = pkFd;
+    setPfd( MASTER, pkFd );
+}
+
 void PacketSwitch::createFIFO () {
     if ( prev != -1 ) {
         mkopen( prev, switchNum, fds[PREV][READEND], fds[PREV][WRITEEND] );
@@ -40,12 +82,6 @@ void PacketSwitch::createFIFO () {
         mkopen( next, switchNum, fds[NEXT][READEND], fds[NEXT][WRITEEND] );
         setPfd( NEXT, fds[NEXT][READEND] );
     }
-}
-
-void PacketSwitch::createSocket() {
-    int pkSfd;
-    struct sockaddr_in pkAddr;
-
 }
 
 void PacketSwitch::setPfd ( int i, int rfd ) {
@@ -74,6 +110,8 @@ void PacketSwitch::info() {
     ", ASK:" << to_string(askCount) << 
     ", RELAYOUT:" << to_string(relayoutCount) << endl << endl;
 }
+
+
 
 void * PacketSwitch::readFile () {
     string sline = "";
@@ -131,6 +169,8 @@ void PacketSwitch::processLine ( vector<string> &tokens ) {
     forwarding( srcIP, destIP, 0 );
 }
 
+
+
 void * PacketSwitch::startPoll () {
     int in = 0;
     int len = 0;
@@ -165,13 +205,12 @@ void * PacketSwitch::startPoll () {
                     if ( strcmp( buf, "info\n" ) == 0 )
                         info();
                     else if ( strcmp( buf, "exit\n" ) == 0 ) {
-                        info();
-                        exit(0);
+                        disconnect();
                     } else 
                         warning( "a2w22: %s: command not found\n", buf );
                 } else {
 
-                frame = rcvFrame(pfds[in].fd);
+                frame = rcvFrame( pfds[in].fd, &len );
                 packetType = frame.packetType;
 
 
@@ -242,6 +281,12 @@ void PacketSwitch::delay (int usec) {
     return;
 }
 
+void PacketSwitch::disconnect() {
+    sendDISCONNECT();
+    info();
+    exit(0);
+}
+
 /**
  * @brief forwarding method include additional step. This step is to send an ASK 
  * packet if a rule isn't in the forwarding table.
@@ -304,6 +349,14 @@ void PacketSwitch::sendASK ( int srcIP, int destIP ) {
     askHistory.push_back(pendingPacket);
 
     askCount++;
+}
+
+void PacketSwitch::sendDISCONNECT () {
+    Packet disconnectPk = composeDISCONNECT();
+
+    string prefix = makePrefix( switchNum, 0, 1 );
+
+    sendFrame( prefix.c_str(), fds[MASTER][WRITEEND], DISCONNECT, &disconnectPk );
 }
 
 void PacketSwitch::sendHELLO () {

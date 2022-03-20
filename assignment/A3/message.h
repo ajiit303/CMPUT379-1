@@ -19,9 +19,9 @@ using namespace std;
 // to the one in lab experiment.
 
 
-typedef enum { UNKNOWN, ADD, ASK, HELLO, HELLO_ACK, RELAY } PacketType;
+typedef enum { UNKNOWN, ADD, ASK, DISCONNECT, HELLO, HELLO_ACK, RELAY } PacketType;
 
-const char PacketTypeName[][16] = { "UNKNOWN", "ADD", "ASK", "HELLO", "HELLO_ACK", "RELAY",  };
+const char PacketTypeName[][16] = { "UNKNOWN", "ADD", "ASK", "DISCONNECT", "HELLO", "HELLO_ACK", "RELAY" };
 
 typedef struct { int srcIP_lo; int srcIP_hi;
     int destIP_lo; int destIP_hi;
@@ -29,6 +29,8 @@ typedef struct { int srcIP_lo; int srcIP_hi;
     int pkCount; } ADDPacket;
 
 typedef struct { int srcIP; int destIP; } ASKPacket;
+
+typedef struct { } DISCONNECTPacket;
 
 typedef struct { int switchNum;
     int prev; int next;
@@ -40,18 +42,21 @@ typedef struct { int srcIP; int destIP; } RELAYPacket;
 
 typedef union { ADDPacket addPacket;
                 ASKPacket askPacket;
+                DISCONNECTPacket disconnectPacket;
                 HELLOPacket helloPacket; 
                 HELLO_ACKPacket hello_ackPacket;
                 RELAYPacket replayPacket; } Packet;
 
 typedef struct { PacketType packetType; Packet packet; } Frame;
 
-Frame rcvFrame (int fd);
+Frame rcvFrame (int fd, int *len);
 
 Packet composeADD ( int srcIP_lo, int srcIP_hi, int destIP_lo, int destIP_hi, 
     int actionType, int actionVal, int pkCount );
 
 Packet composeASK ( int srcIP, int destIP );
+
+Packet composeDISCONNECT ();
 
 Packet composeHELLO ( int switchNum, int prev, int next, int srcIP_lo, int srcIP_high );
 
